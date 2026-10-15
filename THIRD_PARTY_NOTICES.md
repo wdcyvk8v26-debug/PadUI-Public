@@ -12,7 +12,7 @@ The upstream and third-party rights are not replaced by a blanket PadUI license 
 
 ## Creature data
 
-The current independent named/boss reference list is empty by default and is populated through in-game observation or independently verified entries. An earlier Ballistic Mystix import was removed from the current files, but **the imported data remains accessible in older Git commits and pull-request history**. Do not make this existing repository public before the historical data exposure is resolved.
+The current independent named/boss reference list is empty by default and is populated through in-game observation or independently verified entries. This public repository was initialized from a cleaned snapshot, without importing the former private repository's Git history or Ballistic Mystix catalogue.
 
 ## Contributions
 
