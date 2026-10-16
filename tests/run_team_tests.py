@@ -74,7 +74,7 @@ def main() -> None:
         driver, *members = groups
         assert driver.attrib["use_cursor"] == "false"
         assert driver.attrib["w"] == driver.attrib["h"] == "1"
-        assert driver.find("group[@id='name_drag_v1']") is not None
+        assert driver.find("group[@id='corner_drag_v2']") is not None
         assert len(driver.findall("view")) == 8
         for source in driver.findall("view"):
             assert source.attrib["textid"] == "0", "Never bind private name resolvers to SERVER"
@@ -82,19 +82,28 @@ def main() -> None:
         assert {g.attrib["id"] for g in members} == {f"padui_team_member{i}" for i in range(1,10)}
         assert {t.attrib["node"] for t in root.findall("tree")} == {g.attrib["id"] for g in groups}
         assert "sort_controls" not in generated and "footer" not in generated
-        for member in members:
+        for number, member in enumerate(members, 1):
             assert member.attrib["options"] == "no_bordure"
             assert member.attrib["savable"] == "false"
             assert member.attrib["posref"] == "BL TL"
-            assert member.attrib["movable"] == "false", "Native mover must not compete with click/drag button"
+            assert member.attrib["movable"] == "true", "Use the native captured mover"
+            assert member.attrib["on_begin_move"] == member.attrib["on_move"] == "lua"
+            assert member.attrib["on_begin_move_params"] == f"RyzomTeamUI:beginNativeMove({number})"
+            assert member.attrib["on_move_params"] == f"RyzomTeamUI:nativeMove({number})"
             header = member.find("group[@id='header_opened']")
             assert header is not None
             target = header.find("ctrl[@id='target_button']")
             assert target is not None and target.attrib["x"] == target.attrib["y"] == "0"
             assert target.attrib["w"] == member.attrib["w"] and target.attrib["h"] == member.attrib["h"]
-            assert target.attrib["onclick_l"] == target.attrib["onclick_r"] == "lua"
+            for button_id in ("target_button", "target_top", "target_bottom", "target_rim"):
+                button = header.find(f"ctrl[@id='{button_id}']")
+                assert button is not None
+                assert button.attrib["onclick_l"] == button.attrib["onclick_r"] == "lua"
             for score in ("hp", "sap", "sta"):
                 assert header.find(f"view[@id='{score}_fill']") is not None
+            for part in ("grip", "grip_h", "grip_v"):
+                assert header.find(f"view[@id='{part}']") is not None
+            assert header.find("ctrl[@id='grip']") is None, "Do not cover the native mover with a button"
         root_nodes = {}
         for group in groups:
             part = nodes(group, "ui:interface")
@@ -107,7 +116,7 @@ def main() -> None:
         panel_nodes = nodes(panel, "ui:interface:padui_settings:content:page3")
         fixture = temp / "fixture.lua"
         fixture.write_text("return " + lua_table({"roots":root_nodes,"panel":panel_nodes}), encoding="utf-8")
-        print("PASS XML: nine independent windows, full-card target buttons, unbound name resolvers", flush=True)
+        print("PASS XML: nine native movers, separate target areas, unbound name resolvers", flush=True)
         subprocess.run([executable, str(ROOT / "tests/test_team_modular.lua"), str(fixture)], cwd=ROOT, check=True)
 
 

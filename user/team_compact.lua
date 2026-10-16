@@ -17,9 +17,9 @@ local BASE_FONT = {name=11, status=10, hp_text=10, sap_text=9, sta_text=9}
 local SCORES = {'hp', 'sap', 'sta'}
 local TEXT_IDS = {'name', 'status', 'hp_text', 'sap_text', 'sta_text'}
 local words = {
- de={title='Teamfenster', modes={'Vertikal','Horizontal','Frei'}, columns='Spalten (vertikal)', rows='Zeilen (horizontal)', free='Positionen einzeln gespeichert', locked='LOCK: An (gesperrt)', unlocked='LOCK: Aus (ziehen)', reset='Positionen zur\195\188cksetzen', note='Name: Klick = Ziel; Ziehen = Verschieben (LOCK aus).', overflow='Raster gr\195\182\195\159er als Bildschirm: Gr\195\182\195\159e oder Zeilen/Spalten anpassen.'},
- en={title='Team windows', modes={'Vertical','Horizontal','Free'}, columns='Columns (vertical)', rows='Rows (horizontal)', free='Individual positions saved', locked='LOCK: On', unlocked='LOCK: Off (drag)', reset='Reset positions', note='Name: click to target; drag to move with LOCK off.', overflow='Grid exceeds screen: adjust scale or row/column count.'},
- fr={title='Fen\195\170tres d\226\128\153\195\169quipe', modes={'Vertical','Horizontal','Libre'}, columns='Colonnes (vertical)', rows='Lignes (horizontal)', free='Positions individuelles sauv\195\169es', locked='LOCK : actif', unlocked='LOCK : inactif', reset='Replacer les fen\195\170tres', note='Nom : clic = cible ; glisser = placer (LOCK inactif).', overflow='Grille trop grande : ajuster la taille ou les lignes/colonnes.'}
+ de={title='Teamfenster', modes={'Vertikal','Horizontal','Frei'}, columns='Spalten (vertikal)', rows='Zeilen (horizontal)', free='Positionen einzeln gespeichert', locked='LOCK: An (gesperrt)', unlocked='LOCK: Aus (ziehen)', reset='Positionen zur\195\188cksetzen', note='Name/Balken: Ziel. Eckgriff oben rechts: Ziehen (LOCK aus).', grip_tip='Am Kreuz ziehen, um das Fenster zu verschieben', overflow='Raster gr\195\182\195\159er als Bildschirm: Gr\195\182\195\159e oder Zeilen/Spalten anpassen.'},
+ en={title='Team windows', modes={'Vertical','Horizontal','Free'}, columns='Columns (vertical)', rows='Rows (horizontal)', free='Individual positions saved', locked='LOCK: On', unlocked='LOCK: Off (drag)', reset='Reset positions', note='Name/bars: target. Top-right grip: drag with LOCK off.', grip_tip='Drag the cross to move the window', overflow='Grid exceeds screen: adjust scale or row/column count.'},
+ fr={title='Fen\195\170tres d\226\128\153\195\169quipe', modes={'Vertical','Horizontal','Libre'}, columns='Colonnes (vertical)', rows='Lignes (horizontal)', free='Positions individuelles sauv\195\169es', locked='LOCK : actif', unlocked='LOCK : inactif', reset='Replacer les fen\195\170tres', note='Nom/jauges : cible. Poignee en haut a droite : deplacer (LOCK inactif).', grip_tip='Tirer la croix pour deplacer la fenetre', overflow='Grille trop grande : ajuster la taille ou les lignes/colonnes.'}
 }
 local function db(p) return tonumber(getDbProp(p)) or 0 end
 local function ready() return game and game.InGameDbInitialized and (not isPlayerReady or isPlayerReady()) end
@@ -94,16 +94,15 @@ function T:interfaceXML()
   a[#a+1] = '<view type="text_id" id="name_source'..i..'" textid="0" dynamic_string="false" posref="TL TL" fontsize="10" color="0 0 0 0" shadow="false" global_color="false" />'
  end
  -- Root groups need an explicit tree entry for native draw/checkCoords.
- a[#a+1] = '<group id="name_drag_v1" w="0" h="0" /></group><tree node="padui_team_driver" />'
+ a[#a+1] = '<group id="corner_drag_v2" w="0" h="0" /></group><tree node="padui_team_driver" />'
  for i=1,9 do
   local id = 'padui_team_member'..i
-  a[#a+1] = '<group type="container" id="'..id..'" w="200" h="34" x="20" y="100" posref="BL TL" title="" options="no_bordure" active="false" opened="true" openable="false" resizer="false" movable="false" lockable="true" locked="true" savable="false" active_savable="false" popable="false" force_open_out="true" open_button="false" title_bar_open="false" right_button="false" header_active="false" global_color="false" global_color_over="false" min_w="1" min_h="1" max_w="4096" max_h="4096" pop_min_w="1" pop_min_h="1" pop_max_w="4096" pop_max_h="4096" escapable="false">'
+  a[#a+1] = '<group type="container" id="'..id..'" w="200" h="34" x="20" y="100" posref="BL TL" title="" options="no_bordure" active="false" opened="true" openable="false" resizer="false" movable="true" lockable="true" locked="true" savable="false" active_savable="false" popable="false" force_open_out="true" open_button="false" title_bar_open="false" right_button="false" header_active="false" global_color="false" global_color_over="false" min_w="1" min_h="1" max_w="4096" max_h="4096" pop_min_w="1" pop_min_h="1" pop_max_w="4096" pop_max_h="4096" escapable="false" on_begin_move="lua" on_begin_move_params="RyzomTeamUI:beginNativeMove('..i..')" on_move="lua" on_move_params="RyzomTeamUI:nativeMove('..i..')">'
   a[#a+1] = '<group id="header_closed" h="0" /><group id="header_opened" w="200" h="34" posref="TL TL">'
   local function bitmap(name, x, y, w, h, color)
    a[#a+1] = '<view type="bitmap" id="'..name..'" posref="TL TL" x="'..x..'" y="'..y..'" w="'..w..'" h="'..h..'" texture="blank.tga" scale="true" color="'..color..'" global_color="false" />'
   end
   bitmap('background',0,0,200,34,'12 18 24 255')
-  bitmap('grip',0,0,200,13,'110 235 225 24')
   bitmap('selected',4,0,3,34,'255 215 110 255')
   bitmap('self_marker',0,0,3,34,'110 235 225 255')
   bitmap('hp_back',8,-13,188,10,'35 42 48 255')
@@ -121,7 +120,14 @@ function T:interfaceXML()
     a[#a+1] = '<view type="text" id="'..name..'_s'..size..'" posref="'..posref..'"'..(parent ~= '' and (' posparent="'..parent..'"') or '')..' x="'..x..'" y="0" fontsize="'..size..'" hardtext="" color="245 235 210 255" shadow="true" global_color="false" active="false" />'
    end
   end
-  a[#a+1] = '<ctrl type="button" id="target_button" posref="TL TL" x="0" y="0" w="200" h="34" button_type="push_button" scale="true" tx_normal="blank.tga" tx_pushed="blank.tga" tx_over="blank.tga" color="0 0 0 0" col_pushed="0 0 0 0" col_over="255 255 255 16" global_color_normal="false" global_color_pushed="false" global_color_over="false" onclick_l="lua" params_l="RyzomTeamUI:click('..i..', &apos;left&apos;)" onclick_r="lua" params_r="RyzomTeamUI:click('..i..', &apos;right&apos;)" />'
+  -- Views do not capture input. The hole in the target-button coverage below
+  -- exposes the native container mover, not a polled custom drag button.
+  bitmap('grip',180,-4,16,16,'110 235 225 220')
+  bitmap('grip_h',183,-11,10,2,'255 255 255 255')
+  bitmap('grip_v',187,-7,2,10,'255 255 255 255')
+  for _,buttonId in ipairs({'target_button','target_top','target_bottom','target_rim'}) do
+   a[#a+1] = '<ctrl type="button" id="'..buttonId..'" posref="TL TL" x="0" y="0" w="200" h="34" active="'..(buttonId=='target_button' and 'true' or 'false')..'" button_type="push_button" scale="true" tx_normal="blank.tga" tx_pushed="blank.tga" tx_over="blank.tga" color="0 0 0 0" col_pushed="0 0 0 0" col_over="255 255 255 16" global_color_normal="false" global_color_pushed="false" global_color_over="false" onclick_l="lua" params_l="RyzomTeamUI:click('..i..', &apos;left&apos;)" onclick_r="lua" params_r="RyzomTeamUI:click('..i..', &apos;right&apos;)" />'
+  end
   a[#a+1] = '</group><group id="content" w="0" h="0" /></group><tree node="'..id..'" />'
  end
  -- A small child panel in the existing Layout tab. Original scale sliders stay.
@@ -151,7 +157,7 @@ T.stats = {polls=0, sorts=0, layouts=0, writes=0, builds=0}
 T.rows, T.cards, T.members = {}, {}, {}
 T.lastTick, T.character, T.failed, T.initializing = nil, nil, nil, false
 T.uiReady, T.panel, T.busy, T.menuMember = false, nil, false, nil
-T.pointer, T.pointerWasDown = nil, false
+T.pointer, T.pointerWasDown, T.nativeDrag = nil, false, nil
 local function put(v, id, key, value)
  local n = v.nodes[id]
  if not n then return end
@@ -180,7 +186,7 @@ function T:initUI()
  end
  T.driver, T.legacy = ui(DRIVER), legacy
  if not T.driver then error('Team controller not created') end
- if not ui(DRIVER..':name_drag_v1') then error('Name-drag widgets changed; fully restart Ryzom') end
+ if not ui(DRIVER..':corner_drag_v2') then error('Corner-drag widgets changed; fully restart Ryzom') end
  T.sources, T.oldSources, T.nameRequests = {}, {}, {}
  for i=0,7 do
   T.sources[i] = ui(DRIVER..':name_source'..i)
@@ -196,7 +202,7 @@ function T:initUI()
   local v = {window=w, nodes={}, cache={}, slot=i}
   v.nodes.window = w
   v.nodes.header = ui(CARD..i..':header_opened')
-  for _,id in ipairs({'background','grip','selected','self_marker','hp_back','hp_fill','sap_back','sap_fill','sta_back','sta_fill','target_button'}) do
+  for _,id in ipairs({'background','grip','grip_h','grip_v','selected','self_marker','hp_back','hp_fill','sap_back','sap_fill','sta_back','sta_fill','target_button','target_top','target_bottom','target_rim'}) do
    v.nodes[id] = ui(CARD..i..':header_opened:'..id)
    if not v.nodes[id] then error('Missing member element '..id) end
   end
@@ -208,6 +214,8 @@ function T:initUI()
   w:updateCoords()
   changed(w,'opened',true)
   w:updateCoords()
+  v.nodes.mover=ui(CARD..i..':mover')
+  if not v.nodes.mover then error('Native team mover missing; fully restart Ryzom') end
   -- Only these new containers: no native frame/fading, custom bars stay visible.
   runAH(nil,'set_alpha','target='..CARD..i..'|alpha=0')
   T.cards[i] = v
@@ -418,6 +426,7 @@ local function less(a,b)
 end
 function T:bind(members,rosterKey)
  if rosterKey~=T.rosterKey then
+  if T.nativeDrag then T:cancelPointer() end
   local occupied={}
   for _,v in ipairs(T.cards) do
    v.member=T.members[v.key]
@@ -452,7 +461,8 @@ function T:geometry(scale,delta)
   put(v,'header','w',T.cellW);put(v,'header','h',T.cellH)
   put(v,'background','w',T.cellW);put(v,'background','h',T.cellH)
   for _,id in ipairs({'selected','self_marker'}) do put(v,id,'h',T.cellH) end
-  put(v,'grip','h',T.nameH);put(v,'grip','w',T.cellW);put(v,'self_marker','w',px(3));put(v,'selected','x',px(4));put(v,'selected','w',px(3))
+  v.inputKey=nil
+  put(v,'self_marker','w',px(3));put(v,'selected','x',px(4));put(v,'selected','w',px(3))
   for _,score in ipairs(SCORES) do
    local width=score=='hp' and T.hpW or T.halfW
    local x=score=='sta' and px(12)+T.halfW or px(8)
@@ -471,7 +481,7 @@ function T:geometry(scale,delta)
   put(v,'name','x',px(8));put(v,'status','x',-px(4))
   v.nodes.name:setLineMaxW(T.cellW-px(80))
   v.nodes.status:setLineMaxW(px(70))
-  put(v,'target_button','x',0);put(v,'target_button','w',T.cellW);put(v,'target_button','h',T.cellH)
+  T:inputGeometry(v,db(SAVE..'LOCKED')==1)
  end
 end
 function T:savePositions()
@@ -495,9 +505,94 @@ function T:resetPositions()
  end
  T.dragging=nil;T.layoutKey=nil;T.lastMode=nil;T:savePositions();T:requestUpdate()
 end
--- The normal transparent button keeps native mouse capture and click/menu
--- handling over the WHOLE card. Only a press in the name row may drag. There
--- is no native mover under it competing for the same mouse events.
+-- Leave exactly one 16..24 px square uncovered by deeper target buttons.
+-- The stock mover is TM-anchored and native updateCoords owns its width. We
+-- set only its vertical track; changing width here would be undone by NeL.
+function T:inputGeometry(v,locked)
+ local key=T.geometryKey..':'..tostring(locked)
+ if v.inputKey==key then return end
+ v.inputKey=key
+ local size=math.max(16,round(16*T.scale))
+ local margin=4
+ local x=T.cellW-size-margin
+ local bottom=margin+size
+ local function rect(id,rx,ry,rw,rh)
+  put(v,id,'x',rx);put(v,id,'y',ry);put(v,id,'w',rw);put(v,id,'h',rh)
+ end
+ rect('grip',x,-margin,size,size)
+ local mid=math.floor(size/2)
+ rect('grip_h',x+3,-margin-mid+1,size-6,2)
+ rect('grip_v',x+mid-1,-margin-3,2,size-6)
+ for _,id in ipairs({'grip','grip_h','grip_v'}) do put(v,id,'active',not locked) end
+ -- Main rectangle plus three non-overlapping pieces cover everything except
+ -- the grip. With LOCK on the main button covers the entire card again.
+ rect('target_button',0,0,locked and T.cellW or x,T.cellH)
+ rect('target_top',x,0,size+margin,margin)
+ rect('target_bottom',x,-bottom,size+margin,math.max(0,T.cellH-bottom))
+ rect('target_rim',T.cellW-margin,-margin,margin,size)
+ for _,id in ipairs({'target_top','target_bottom','target_rim'}) do put(v,id,'active',not locked) end
+ put(v,'mover','y',-margin);put(v,'mover','h',size)
+ put(v,'mover','active',not locked)
+ local right=locked and round(4*T.scale) or size+margin+4
+ put(v,'status','x',-right)
+ v.nodes.name:setLineMaxW(math.max(1,T.cellW-right-round(82*T.scale)))
+end
+
+-- These callbacks are native mouse events, not inferred from a hover window
+-- or a frame-time press edge. Native capture keeps moving outside the grip.
+function T:beginNativeMove(slot)
+ slot=tonumber(slot)
+ local v=slot and T.cards[slot]
+ if not ready() or T.failed or not T.uiReady or not T:isEnabled()
+  or db(SAVE..'LOCKED')==1 or not v or not v.member or not v.window.active
+  or v.x==nil or not T.geometryKey then return end
+ T:cancelPointer();T.pointer=nil;T.pointerWasDown=true
+ local m=v.member
+ T.nativeDrag={slot=slot,key=v.key,uid=m.uid,nameId=m.nameId,index=m.index,
+  mode=T:mode(),geometry=T.geometryKey,roster=T.rosterKey,
+  sw=T.viewportW,sh=T.viewportH,nativeX=v.window.x,nativeY=v.window.y,
+  x=v.x,y=v.y,anchorX=T.anchorX,anchorY=T.anchorY}
+ T.dragging=slot
+end
+function T:nativeMove(slot)
+ slot=tonumber(slot)
+ local g=T.nativeDrag
+ local v=slot and T.cards[slot]
+ if not ready() or T.failed or not T.uiReady or not v then return end
+ local sw,sh=getWindowSize()
+ local valid=g and g.slot==slot and v.key==g.key and v.member and v.window.active
+  and T:isEnabled() and db(SAVE..'LOCKED')~=1 and T:mode()==g.mode
+  and T.geometryKey==g.geometry and T.rosterKey==g.roster and sw==g.sw and sh==g.sh
+ if valid and not v.member.self then
+  local p='SERVER:GROUP:'..g.index..':'
+  valid=db(p..'UID')==g.uid and db(p..'NAME')==g.nameId
+ end
+ if not valid then
+  T:cancelPointer()
+  if T.geometryKey and T.ordered and sw and sh then T:arrange(T:mode(),sw,sh) end
+  return
+ end
+ local dx,dy=v.window.x-g.nativeX,v.window.y-g.nativeY
+ if g.mode==2 then
+  v.freeX=clamp(g.x+dx,0,math.max(0,sw-T.cellW))
+  v.freeY=-clamp(-(g.y+dy),0,math.max(0,sh-T.cellH))
+  v.freeSet=true
+ else
+  T.anchorX=g.anchorX+dx;T.anchorY=g.anchorY+dy
+ end
+ g.moved=true;T.pendingPositionSave=true;T.layoutKey=nil
+ -- Synchronize the whole arrangement in the mouse event, not at server-tick
+ -- rate. The native mover retains ownership of capture and the grabbed window.
+ T:arrange(g.mode,sw,sh)
+end
+function T:endNativeMove()
+ if not T.nativeDrag then return end
+ T.nativeDrag=nil;T.dragging=nil;T.sortKey=nil
+ if T.pendingPositionSave then T:savePositions() end
+end
+
+-- Selection stays on native buttons. Dragging is initiated exclusively by
+-- CCtrlMover's on_begin_move/on_move callbacks through the corner hit area.
 local function inside(n,x,y)
  return n and n.active and x>=n.x_real and x<n.x_real+n.w_real
   and y>n.y_real and y<=n.y_real+n.h_real
@@ -509,23 +604,24 @@ local function identity(m)
  return db(p..'UID')==m.uid and db(p..'NAME')==m.nameId
 end
 function T:cancelPointer()
+ if T.nativeDrag then T.layoutKey=nil end
+ T.nativeDrag=nil
  if T.pointer then T.pointer.cancelled=true end
  if T.dragging then T.sortKey=nil end
  T.dragging=nil
 end
 function T:beginPointer(v,px,py)
  if not v or not v.member or not v.window.active or v.x==nil then return end
- local n=v.nodes.target_button
- if not inside(n,px,py) then return end
+ local hit=false
+ for _,id in ipairs({'target_button','target_top','target_bottom','target_rim'}) do
+  if inside(v.nodes[id],px,py) then hit=true;break end
+ end
+ if not hit then return end
  local m=v.member
- local _,cols,rows=T:grid(#T.ordered,T:mode()==0 and 0 or 1,T:trackCount(T:mode()))
- local inName=py>n.y_real+n.h_real-(T.nameH or 13)
  T.pointer={slot=v.slot,key=v.key,member={name=m.name,self=m.self,index=m.index,uid=m.uid,nameId=m.nameId},
-  pressX=px,pressY=py,x=v.x,y=v.y,anchorX=T.anchorX,anchorY=T.anchorY,
+  pressX=px,pressY=py,
   mode=T:mode(),geometry=T.geometryKey,roster=T.rosterKey,viewportW=T.viewportW,viewportH=T.viewportH,
-  maxX=math.max(0,T.viewportW-(cols*(T.cellW+T.gap)-T.gap)),
-  maxTop=math.max(0,T.viewportH-(rows*(T.cellH+T.gap)-T.gap)),
-  canMove=inName and db(SAVE..'LOCKED')~=1,locked=db(SAVE..'LOCKED'),moved=false}
+  locked=db(SAVE..'LOCKED')}
  -- Freeze HP sorting while a button is held, including clicks on the bars.
  T.dragging=v.slot
 end
@@ -537,33 +633,20 @@ function T:advancePointer(mx,my)
   or not T:isEnabled() or T:mode()~=g.mode or T.geometryKey~=g.geometry or T.rosterKey~=g.roster
   or T.viewportW~=g.viewportW or T.viewportH~=g.viewportH
   or db(SAVE..'LOCKED')~=g.locked then T:cancelPointer();return end
- if not g.canMove then return end
- local dx,dy=mx-g.pressX,my-g.pressY
- -- Latch movement: dragging away and back must never become a target click.
- if dx*dx+dy*dy>=16 then g.moved=true end
- if not g.moved then return end
- local x,y
- if g.mode==2 then
-  x=clamp(g.x+dx,0,math.max(0,T.viewportW-T.cellW))
-  y=-clamp(-(g.y+dy),0,math.max(0,T.viewportH-T.cellH))
-  if v.freeSet and v.freeX==x and v.freeY==y then return end
-  v.freeX,v.freeY,v.freeSet=x,y,true
- else
-  x=clamp(g.anchorX+dx,0,g.maxX)
-  y=-clamp(-(g.anchorY+dy),0,g.maxTop)
-  if T.anchorX==x and T.anchorY==y then return end
-  T.anchorX,T.anchorY=x,y
- end
- T.layoutKey=nil;T.pendingPositionSave=true
+ -- A name/bar press never moves a window; native callbacks own all dragging.
 end
 function T:finishPointer()
  local g=T.pointer
  if not g or g.finished then return end
  g.finished=true;T.dragging=nil;T.sortKey=nil
- if g.moved then T.pendingPositionSave=true;T.layoutKey=nil end
 end
 function T:trackMovement(mode)
  local down,px,py=getMouseDown()
+ if T.nativeDrag then
+  if not down then T:endNativeMove() end
+  T.pointerWasDown=down or false
+  return
+ end
  local mx,my=getMousePos()
  if type(mx)~='number' or type(my)~='number' then return end
  if down and not T.pointerWasDown then
@@ -581,8 +664,8 @@ function T:trackMovement(mode)
  if not down then T:finishPointer() end
 end
 -- Called only by the native button's mouse-up action, NEVER by the frame poll.
--- The frame loop may finish a drag first; keep its result until this click is
--- consumed, so release-order differences cannot select somebody after a drag.
+-- Retain the pressed member snapshot until native button release. A corner
+-- gesture has native mover capture and never reaches this button callback.
 function T:consumePointer(slot)
  local g=T.pointer
  local _,px,py=getMouseDown()
@@ -602,9 +685,8 @@ function T:consumePointer(slot)
  local mx,my=getMousePos()
  if type(mx)=='number' and type(my)=='number' then T:advancePointer(mx,my) end
  T:finishPointer()
- if g.moved and T.geometryKey then T:arrange(T:mode(),T.viewportW,T.viewportH) end
  T.pointer=nil;T.pointerWasDown=false
- return g.member,g.moved or g.cancelled
+ return g.member,g.cancelled==true
 end
 function T:arrange(mode,sw,sh)
  local order={}
@@ -654,7 +736,7 @@ function T:render(ownName)
   if not colors[c] then colors[c]=PadUISettings and PadUISettings:withTransparency(c) or c end
   return colors[c]
  end
- local accent,gripColor=PadUI:accent(),PadUI:accent(24)
+ local accent,gripColor=PadUI:accent(),PadUI:accent(220)
  local tr={}
  for _,key in ipairs({'self','absent','ko','target','leader','sap','stamina'}) do tr[key]=PadUI:tr(key) end
  for _,v in ipairs(T.cards) do
@@ -662,7 +744,9 @@ function T:render(ownName)
   changed(v.window,'active',m~=nil)
   if m then
    put(v,'window','locked',locked)
-   put(v,'grip','active',not locked);put(v,'grip','color',gripColor)
+   T:inputGeometry(v,locked)
+   put(v,'grip','color',gripColor)
+   put(v,'mover','tooltip',labels().grip_tip)
    local selected=(m.self and targetName==ownName:lower()) or (not m.self and m.uid==targetUid)
    put(v,'selected','active',selected);put(v,'self_marker','active',m.self)
    put(v,'self_marker','color',accent)
@@ -676,7 +760,7 @@ function T:render(ownName)
    put(v,'status','hardtext',status)
    put(v,'status','color',m.self and accent or (m.present and '220 220 205 255' or '180 180 170 255'))
    put(v,'background','color',color(m.self and '16 43 55 255' or (m.present and '12 18 24 255' or '18 18 18 255')))
-   put(v,'target_button','tooltip',m.name)
+   for _,id in ipairs({'target_button','target_top','target_bottom','target_rim'}) do put(v,id,'tooltip',m.name) end
    for _,score in ipairs(SCORES) do
     local value=m.present and m[score] or 0
     local width=score=='hp' and T.hpW or T.halfW

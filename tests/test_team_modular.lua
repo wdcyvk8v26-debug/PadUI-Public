@@ -20,12 +20,21 @@ local function nativeCoords()
    p.w_real=p.w;p.h=h.h;p.h_real=h.h
    p.x_real=p.x;p.y_real=p.y-p.h_real
    h.active=p.opened;h.x_real=p.x;h.y_real=p.y-h.h;h.w_real=p.w;h.h_real=h.h
-   local b=R[id..':header_opened:target_button']
-   b.x_real=h.x_real+b.x;b.y_real=p.y+b.y-b.h;b.w_real=b.w;b.h_real=b.h
+   for _,suffix in ipairs({'target_button','target_top','target_bottom','target_rim','grip','grip_h','grip_v'}) do
+    local b=R[id..':header_opened:'..suffix]
+    if b then b.x_real=h.x_real+b.x;b.y_real=p.y+b.y-b.h;b.w_real=b.w;b.h_real=b.h end
+   end
+   local mover=R[id..':mover']
+   if mover then
+    -- NeL overwrites width on every container update, not height/y. TM TM.
+    mover.w=p.w-8;mover.w_real=mover.w;mover.h_real=mover.h
+    mover.x_real=p.x+4;mover.y_real=p.y+mover.y-mover.h
+   end
   end
  end
 end
-local function add(id,attrs)
+local add
+add=function(id,attrs)
  local p={};for k,v in pairs(attrs or {}) do p[k]=v end
  p.id=id;p.textid_dblink=p.dbBinding or '';p.initialized=false
  for _,k in ipairs({'x','y','w','h','x_real','y_real','w_real','h_real','textid'}) do p[k]=p[k] or 0 end
@@ -39,7 +48,10 @@ local function add(id,attrs)
   addGroup=function(_,child)assert(U[child.id])end,
   setLineMaxW=function(_,v)assert(type(v)=='number');stats.writes=stats.writes+1 end,
   invalidateCoords=function()end,
-  updateCoords=function()p.setup=true;nativeCoords()end
+  updateCoords=function()
+   if p.type=='container' and p.movable and not U[id..':mover'] then add(id..':mover',{type='mover',y=-4,h=22}) end
+   p.setup=true;nativeCoords()
+  end
  }
  local obj=setmetatable({}, {
   __index=function(_,k)
@@ -150,21 +162,49 @@ local function press(v,offsetY,doFrame)
  mx,my,mouse,over,capture=px,py,true,v.window,v.nodes.target_button
  if doFrame~=false then frame(true)end
 end
+local nativeStart
+local function pick(v,x,y)
+ if not v.window.active or not v.window.opened then return nil end
+ -- Descendant controls beat the root mover; decorative views never capture.
+ for _,id in ipairs({'target_button','target_top','target_bottom','target_rim'}) do
+  if hit(R[v.nodes[id].id],x,y) then return v.nodes[id] end
+ end
+ if hit(R[v.nodes.mover.id],x,y) and not v.window.locked then return v.nodes.mover end
+end
+local function pressGrip(v,doFrame)
+ nativeCoords();local g=R[v.nodes.grip.id]
+ px,py=g.x_real+g.w_real/2,g.y_real+g.h_real/2
+ mx,my,mouse,over=px,py,true,v.window
+ capture=pick(v,px,py)
+ assert(capture==v.nodes.mover,'Grip is not accessible to native capture')
+ nativeStart={v=v,x=v.window.x,y=v.window.y}
+ -- Run the actual generated XML handler, before the next frame.
+ caller=capture;assert(execute(R[v.window.id].on_begin_move_params))();caller=nil
+ if doFrame~=false then frame(true) end
+end
 local function move(dx,dy,doFrame)
  mx,my=px+dx,py+dy
+ if capture and R[capture.id].type=='mover' and nativeStart then
+  local v=nativeStart.v
+  if v.window.active and not v.window.locked then
+   v.window.x=nativeStart.x+dx;v.window.y=nativeStart.y+dy
+   caller=capture;assert(execute(R[v.window.id].on_move_params))();caller=nil
+   nativeCoords()
+  end
+ end
  if doFrame~=false then frame(true)end
 end
 local function release(doClick,frameFirst)
  mouse=false
  if frameFirst then frame(true)end
- if doClick~=false and capture then
+ if doClick~=false and capture and R[capture.id].type~='mover' then
   local b=R[capture.id]
   local winId=capture.id:match('^(.-):header_opened:')
   if R[winId].active and hit(b,mx,my) then
    caller=capture;assert(execute(b.params_l))();caller=nil
   end
  end
- capture=nil;frame(true)
+ capture=nil;nativeStart=nil;frame(true)
 end
 local function unlock(t)if D[SAVE..'LOCKED']==1 then t:toggleLock();nativeCoords()end end
 local function lock(t)if D[SAVE..'LOCKED']==0 then t:toggleLock();nativeCoords()end end
@@ -191,7 +231,7 @@ end)
 test('nine reused native windows, explicitly opened, one frame controller',function()
  game.InGameDbInitialized=true;frame();frame()
  assert(visible()==1 and stats.parses==1 and stats.panels==1)
- for _,v in ipairs(T.cards)do assert(v.window.opened and not v.window.movable)end
+ for _,v in ipairs(T.cards)do assert(v.window.opened and v.window.movable)end
  assert(hooks[DRIVER]=='RyzomTeamUI:update()' and hooks[LEGACY]=='')
 end)
 test('visibility checkbox and native window-manager toggle agree',function()
@@ -273,11 +313,11 @@ test('small mouse jitter remains a click, without moving a window',function()
 end)
 test('free drag moves only that card and does not change target',function()
  local v,b=member(200),member(201);local x,y,bx,by=v.x,v.y,b.x,b.y;local n=#actions
- press(v);move(20,-30);assert(v.x==x+20 and v.y==y-30 and b.x==bx and b.y==by)
+ pressGrip(v);move(20,-30);assert(v.x==x+20 and v.y==y-30 and b.x==bx and b.y==by)
  release();assert(#actions==n and D[SAVE..'FREE:'..v.slot..':X']==v.x)
 end)
 test('drag back to the starting point is not a target click',function()
- local v=member(200);local n=#actions;press(v);move(30,-10);move(0,0);release();assert(#actions==n)
+ local v=member(200);local n=#actions;pressGrip(v);move(30,-10);move(0,0);release();assert(#actions==n)
 end)
 test('a long hold without motion still selects on release',function()
  local v=member(200);local n=#actions;press(v);for i=1,20 do frame()end;release();assert(#actions==n+1)
@@ -293,34 +333,34 @@ end)
 test('automatic mode drags all cards together, preserving free layout',function()
  local v,b=member(200),member(201);local fx,fy=v.x,v.y;T:setLayout(0);nativeCoords()
  local x,y,bx,by=v.x,v.y,b.x,b.y;local n=#actions
- press(v);move(20,-10);assert(v.x==x+20 and b.x==bx+20 and b.y==by-10);release();assert(#actions==n)
+ pressGrip(v);move(20,-10);assert(v.x==x+20 and b.x==bx+20 and b.y==by-10);release();assert(#actions==n)
  T:setLayout(2);nativeCoords();assert(v.x==fx and v.y==fy)
 end)
 test('last mouse-up position is applied even without a final move frame',function()
  local v=member(200);local x=v.x;local n=#actions
- press(v);move(20,0);move(30,0,false);release();assert(v.x==x+30 and #actions==n)
+ pressGrip(v);move(20,0);move(30,0,false);release();assert(v.x==x+30 and #actions==n)
 end)
 test('release-frame before click callback cannot target after dragging',function()
- local v=member(200);local n=#actions;press(v);move(10,0);release(true,true);assert(#actions==n)
+ local v=member(200);local n=#actions;pressGrip(v);move(10,0);release(true,true);assert(#actions==n)
 end)
 test('quick native click between frames is still a target click',function()
  local v=member(200);local n=#actions;press(v,5,false);release();assert(#actions==n+1)
 end)
 test('quick drag between frames is not mistaken for a target click',function()
- local v=member(200);local x=v.x;local n=#actions;press(v,5,false);move(12,0,false);release()
+ local v=member(200);local x=v.x;local n=#actions;pressGrip(v,false);move(12,0,false);release()
  assert(v.x==x+12 and #actions==n)
 end)
 test('mouse release outside the old button still finishes and saves a drag',function()
- local v=member(200);local n=#actions;press(v);move(20,-10);move(100,-70,false);release(false)
+ local v=member(200);local n=#actions;pressGrip(v);move(20,-10);move(100,-70,false);release(false)
  assert(not T.dragging and D[SAVE..'FREE:'..v.slot..':Y']==v.y and #actions==n)
 end)
 test('next quick click is not swallowed after releasing outside a button',function()
- local v=member(200);press(v);move(20,0);release(false)
+ local v=member(200);pressGrip(v);move(20,0);release(false)
  local other=member(201);local n=#actions;press(other,5,false);release()
  assert(#actions==n+1 and actions[#actions][2]==tostring(other.member.index))
 end)
 test('holding an automatic grid at a screen edge does not repeat layouts',function()
- T:setLayout(0);nativeCoords();local v=member(200);press(v);move(10000,-10000)
+ T:setLayout(0);nativeCoords();local v=member(200);pressGrip(v);move(10000,-10000)
  local n=T.stats.layouts;for i=1,20 do frame(true)end;assert(T.stats.layouts==n)
  release();T:setLayout(2);nativeCoords()
 end)
@@ -365,32 +405,33 @@ test('server slot reorder preserves free window identity',function()
  populate(8);frame();frame()
 end)
 test('turning LOCK on during a drag stops movement and swallows release',function()
- local v=member(200);local n=#actions;press(v);move(10,0);lock(T);local x,y=v.x,v.y
+ local v=member(200);local n=#actions;pressGrip(v);move(10,0);lock(T);local x,y=v.x,v.y
  move(20,0);release();assert(v.x==x and v.y==y and #actions==n);unlock(T)
 end)
 test('changing layout during a drag never targets a member',function()
- local v=member(200);local n=#actions;press(v);move(10,0);T:setLayout(1);nativeCoords();release();assert(#actions==n)
+ local v=member(200);local n=#actions;pressGrip(v);move(10,0);T:setLayout(1);nativeCoords();release();assert(#actions==n)
  T:setLayout(2);nativeCoords()
 end)
 test('hiding team cancels a held gesture',function()
  local v=member(200);local n=#actions;press(v);T:toggle();release(false);assert(#actions==n and visible()==0)
  T:toggle();nativeCoords()
 end)
-test('all scales and font offsets keep the whole card selectable',function()
+test('all scales and font offsets keep the whole locked card selectable',function()
+ lock(T)
  for _,scale in ipairs({75,100,125,150})do for _,delta in ipairs({-1,0,1})do
   D['UI:SAVE:PADUI:TEAM_SCALE']=scale;D['UI:SAVE:PADUI:FONT_DELTA']=delta;frame()
   assert(T.cellW==2*scale)
   for _,v in ipairs(T.cards)do assert(v.nodes.target_button.x==0 and v.nodes.target_button.w==T.cellW and v.nodes.target_button.h==T.cellH)end
   local s=state();frame();unchanged(s)
  end end
- D['UI:SAVE:PADUI:TEAM_SCALE']=100;D['UI:SAVE:PADUI:FONT_DELTA']=0;frame()
+ D['UI:SAVE:PADUI:TEAM_SCALE']=100;D['UI:SAVE:PADUI:FONT_DELTA']=0;frame();unlock(T)
 end)
 test('viewport resize while held cancels drag rather than saving resize as motion',function()
- local v=member(200);local n=#actions;press(v);sw,sh=1600,900;frame();move(30,0);release(false);assert(#actions==n)
+ local v=member(200);local n=#actions;pressGrip(v);sw,sh=1600,900;frame();move(30,0);release(false);assert(#actions==n)
  sw,sh=1920,1080;frame()
 end)
 test('free drag clamps to screen edges and persists clamped coordinates',function()
- local v=member(200);press(v);move(10000,-10000);release()
+ local v=member(200);pressGrip(v);move(10000,-10000);release()
  assert(v.x==sw-T.cellW and v.y==-(sh-T.cellH))
  assert(D[SAVE..'FREE:'..v.slot..':X']==v.x and D[SAVE..'FREE:'..v.slot..':Y']==v.y)
  T:resetPositions();nativeCoords()
@@ -398,6 +439,59 @@ end)
 test('position reset leaves size preference untouched',function()
  local scale=D['UI:SAVE:PADUI:TEAM_SCALE'];T:resetPositions();nativeCoords();assert(D['UI:SAVE:PADUI:TEAM_SCALE']==scale)
 end)
+test('every unlocked card pixel is a target area or the native grip at every scale',function()
+ for _,scale in ipairs({75,100,125,150}) do
+  D['UI:SAVE:PADUI:TEAM_SCALE']=scale;frame();unlock(T)
+  local v=member(200);local g=R[v.nodes.grip.id]
+  assert(g.w_real>=16 and g.h_real>=16)
+  for x=0,T.cellW-1 do for y=0,T.cellH-1 do
+   local sx,sy=v.window.x+x+0.5,v.window.y-y-0.5
+   local control=pick(v,sx,sy)
+   assert(control,'Uncovered card pixel')
+   assert((control==v.nodes.mover)==hit(g,sx,sy),'Target button obscures grip or exposes another drag region')
+  end end
+  lock(T);nativeCoords()
+  assert(not v.nodes.grip.active and not v.nodes.mover.active)
+  assert(pick(v,g.x_real+5,g.y_real+5)==v.nodes.target_button)
+ end
+ D['UI:SAVE:PADUI:TEAM_SCALE']=100;frame();unlock(T)
+end)
+test('native dragging does not wait for a frame or a hover-window match',function()
+ local v=member(200);local x,y=v.x,v.y
+ pressGrip(v,false);over=nil
+ move(1,-1,false)
+ assert(v.x==x+1 and v.y==y-1 and T.nativeDrag)
+ release();assert(not T.nativeDrag)
+end)
+test('repeated one-pixel native drags start immediately',function()
+ local v=member(200);local x=v.x;local n=#actions
+ for i=1,100 do pressGrip(v,false);over=nil;move(1,0,false);release() end
+ assert(v.x==x+100 and #actions==n)
+end)
+test('native moves do not persist positions before mouse release',function()
+ local v=member(200);local n=stats.dbWrites
+ pressGrip(v);move(3,0);move(6,0);move(9,0)
+ assert(stats.dbWrites==n)
+ release();assert(stats.dbWrites>n and D[SAVE..'FREE:'..v.slot..':X']==v.x)
+end)
+test('an unlocked name press never moves a card even beyond the former threshold',function()
+ local v=member(200);local x,y=v.x,v.y;local n=#actions
+ press(v);move(30,0);release()
+ assert(v.x==x and v.y==y and #actions==n+1)
+end)
+test('all four target rectangles select the same member',function()
+ local v=member(200)
+ for _,id in ipairs({'target_button','target_top','target_bottom','target_rim'}) do
+  nativeCoords();local b=R[v.nodes[id].id]
+  if b.h_real>0 then
+   px,py=b.x_real+b.w_real/2,b.y_real+b.h_real/2
+   mx,my,mouse,over,capture=px,py,true,v.window,pick(v,px,py)
+   local n=#actions;frame(true);release()
+   assert(#actions==n+1 and actions[#actions][2]==tostring(v.member.index))
+  end
+ end
+end)
+
 test('module reload reuses windows without stacking settings wrappers',function()
  local refresh=PadUISettings.refresh;dofile('user/team_compact.lua');T=RyzomTeamUI;frame();frame()
  assert(stats.parses==1 and stats.panels==1 and PadUISettings.refresh==refresh and visible()==9)
@@ -415,10 +509,10 @@ test('changing character drops previous member identities',function()
  R[LEGACY].active=true;game.InGameDbInitialized=true;frame();assert(visible()==1 and T.rows[1].self)
 end)
 test('hot reload from old XML requires restart before name-ID writes',function()
- local n=U[DRIVER..':name_drag_v1'];U[DRIVER..':name_drag_v1']=nil;local sets=stats.idSets
+ local n=U[DRIVER..':corner_drag_v2'];U[DRIVER..':corner_drag_v2']=nil;local sets=stats.idSets
  dofile('user/team_compact.lua');T=RyzomTeamUI;T:update()
  assert(T.failed and T.failed:find('fully restart Ryzom',1,true) and stats.idSets==sets)
- U[DRIVER..':name_drag_v1']=n
+ U[DRIVER..':corner_drag_v2']=n
 end)
 test('DB-bound prototype is rejected before assigning text IDs',function()
  R[DRIVER..':name_source0'].textid_dblink='SERVER:GROUP:0:NAME';local sets=stats.idSets
