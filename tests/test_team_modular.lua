@@ -2,7 +2,7 @@
 local fixture=dofile(assert(arg[1], 'Run through tests/run_team_tests.py'))
 local U,D,strings,actions,hooks={}, {}, {}, {}, {}
 local ownName,mouse,sw,sh='SelfTest',false,1920,1080
-local backend={writes=0,dbWrites=0,lookups=0,parses=0,panels=0}
+local backend={writes=0,dbWrites=0,lookups=0,parses=0,panels=0,unsignedReads=0,textidSets=0}
 local SAVE='UI:SAVE:PADUI:TEAM_MODULAR:'
 local LEGACY='ui:interface:team_compact'
 local DRIVER='ui:interface:padui_team_driver'
@@ -10,11 +10,13 @@ local PAGE='ui:interface:padui_settings:content:page3'
 local CARD='ui:interface:padui_team_member'
 local copy
 copy=function(t) local c={};for k,v in pairs(t) do c[k]=type(v)=='table' and copy(v) or v end;return c end
-local exported={id=true,active=true,x=true,y=true,w=true,h=true,x_real=true,y_real=true,w_real=true,h_real=true,locked=true,hardtext=true,textid=true,color=true,tooltip=true,on_active=true,on_active_params=true,on_deactive=true,on_deactive_params=true}
+local exported={id=true,active=true,x=true,y=true,w=true,h=true,x_real=true,y_real=true,w_real=true,h_real=true,locked=true,hardtext=true,textid=true,textid_dblink=true,color=true,tooltip=true,on_active=true,on_active_params=true,on_deactive=true,on_deactive_params=true}
 local execute=loadstring or load
 local function node(id,attrs)
  local p=copy(attrs or {})
  p.id=id
+ p.textid_dblink=p.dbBinding or ''
+ p.initialized=false
  for _,k in ipairs({'x','y','w','h','x_real','y_real','w_real','h_real','textid'}) do p[k]=p[k] or 0 end
  if p.active==nil then p.active=true end
  if p.locked==nil then p.locked=false end
@@ -27,13 +29,23 @@ local function node(id,attrs)
  }
  local obj=setmetatable({}, {
   __index=function(_,key)
+   -- Live Ryzom supports UInt32 setters, but its Lua getter calls nlstop.
+   if key=='textid' then
+    backend.unsignedReads=backend.unsignedReads+1
+    error('UInt32 textid getter triggers native STOP in a8fb199cf6')
+   end
    if methods[key] then return methods[key] end
    assert(exported[key], 'Unexported Lua UI property '..tostring(key)..' on '..id)
    return p[key]
   end,
   __newindex=function(_,key,value)
    assert(exported[key], 'Unexported Lua UI property '..tostring(key)..' on '..id)
-   assert(key~='textid', 'Do not assign a SERVER-bound textid')
+   if key=='textid' then
+    assert(p.type=='text_id' and p.textid_dblink=='', 'Do not assign a DB-bound textid')
+    assert(type(value)=='number' and value==math.floor(value) and value>=0 and value<=4294967295)
+    if value~=p.textid then p.initialized=false end
+    backend.textidSets=backend.textidSets+1
+   end
    local old=p[key];p[key]=value;backend.writes=backend.writes+1
    if key=='active' and old~=value then
     local handler=value and p.on_active or p.on_deactive
@@ -107,8 +119,17 @@ local function syncNames()
  for i=0,7 do
   local n=raw[DRIVER..':name_source'..i]
   if n then
-   n.textid=D['SERVER:GROUP:'..i..':NAME'] or 0
-   n.hardtext=strings[n.textid] or ''
+   -- Simulate native checkCoords, not a Lua read of the UInt32 property.
+   if n.textid_dblink~='' then
+    local id=D[n.textid_dblink] or 0
+    if id<0 then id=id+4294967296 end
+    if id~=n.textid then n.initialized=false end
+    n.textid=id
+   end
+   if not n.initialized then
+    n.hardtext=strings[n.textid] or ''
+    n.initialized=strings[n.textid]~=nil
+   end
   end
  end
 end
@@ -196,19 +217,56 @@ test('generated callbacks compile and layout labels support DE/EN/FR',function()
   assert(#U[PAGE..':modular_team:mode2:text'].hardtext>0)
  end
 end)
+test('team invitation resolves names without reading reflected UInt32',function()
+ assert(visible()==1)
+ populate(1);strings[100]=nil
+ local namesBefore=backend.unsignedReads
+ frame();assert(not memberView(200))
+ for i=1,3 do frame();assert(not memberView(200)) end
+ strings[100]='Member0';frame()
+ assert(memberView(200).member.name=='Member0' and visible()==2)
+ assert(backend.unsignedReads==namesBefore and namesBefore==0)
+ populate(0);frame();assert(visible()==1)
+end)
+test('client-signed high-bit name IDs use unsigned setter without SERVER writes',function()
+ populate(1)
+ D['SERVER:GROUP:0:NAME']=-2147483647
+ strings[2147483649]='HighBitName'
+ frame();frame()
+ assert(memberView(200).member.name=='HighBitName')
+ assert(raw[DRIVER..':name_source0'].textid==2147483649)
+ assert(D['SERVER:GROUP:0:NAME']==-2147483647)
+ populate(0);frame()
+end)
+test('rapid slot reuse with identical label does not keep the old identity',function()
+ populate(1);frame();frame()
+ local old=copy(memberView(200).member)
+ D['SERVER:GROUP:0:UID']=777;D['SERVER:GROUP:0:NAME']=777
+ strings[777]='Member0'
+ D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100
+ T:update();assert(not memberView(777) and not T:validMember(old))
+ -- Return to the original name ID before native name resolution runs.
+ D['SERVER:GROUP:0:UID']=778;D['SERVER:GROUP:0:NAME']=100
+ D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100
+ T:update();assert(not memberView(778))
+ frame();assert(memberView(778).member.name=='Member0' and not memberView(200))
+ populate(0);frame()
+end)
 test('all group sizes including empty group with self hidden',function()
- for n=0,8 do populate(n);frame();assert(visible()==n+1) end
+ for n=0,8 do populate(n);frame();frame();assert(visible()==n+1) end
  T:toggleSelf();assert(visible()==8)
  populate(0);frame();assert(visible()==0)
- T:toggleSelf();populate(8);frame();assert(visible()==9)
+ T:toggleSelf();populate(8);frame();frame();assert(visible()==9)
  assert(backend.parses==1 and backend.panels==1)
 end)
 test('steady state causes no extra sort, layout, UI setters or DB writes',function()
  frame();local sorts,layouts,writes,dbw=snapshot(T)
+ local idsets=backend.textidSets
  for i=1,200 do frame() end
  assert(T.stats.sorts==sorts and T.stats.layouts==layouts)
  assert(backend.writes==writes,'redundant UI property writes')
  assert(backend.dbWrites==dbw,'writes to saved configuration while idle')
+ assert(backend.textidSets==idsets and backend.unsignedReads==0)
 end)
 test('second hook in same tick never repeats data collection',function()
  local polls=T.stats.polls
@@ -326,7 +384,7 @@ test('viewport shrink clamps once; stable viewport does not repeat layouts',func
 end)
 test('module reload reuses native windows and does not stack settings wrappers',function()
  local oldRefresh=PadUISettings.refresh
- dofile('user/team_compact.lua');T=RyzomTeamUI;frame()
+ dofile('user/team_compact.lua');T=RyzomTeamUI;frame();frame()
  assert(not T.failed and T.uiReady and backend.parses==1 and backend.panels==1)
  assert(PadUISettings.refresh==oldRefresh)
  assert(visible()==9)
@@ -342,7 +400,7 @@ test('cold restart declares save leaves before native config restoration',functi
  assert(D[SAVE..'INIT']==0 and D[SAVE..'FREE:9:Y']~=nil)
  -- Mirror CInterfaceConfig::streamToDataBase: only existing leaves restored.
  for k,v in pairs(saved) do if D[k]~=nil then D[k]=v end end
- game.InGameDbInitialized=true;frame()
+ game.InGameDbInitialized=true;frame();frame()
  assert(not T.failed and T:isEnabled() and T.cards[1].freeX==savedX)
  assert(T:mode()==2 and visible()==9)
 end)
@@ -356,6 +414,17 @@ test('character change drops cached identities and restores that character prefe
  assert(T.character==ownName and visible()==1 and T.rows[1].member==nil)
  assert(T.rows[1].self and T.rows[1].name==ownName)
  assert(D[SAVE..'LOCKED']==1)
+end)
+test('hot reload from the DB-bound prototype requests restart before writing IDs',function()
+ local n=raw[DRIVER..':name_source0'];n.textid_dblink='SERVER:GROUP:0:NAME'
+ local before=backend.textidSets
+ dofile('user/team_compact.lua');T=RyzomTeamUI;T:update()
+ assert(T.failed and T.failed:find('fully restart Ryzom',1,true))
+ assert(backend.textidSets==before and U['ui:interface:team_list'].active)
+ n.textid_dblink=''
+end)
+test('no reflected UInt32 read was attempted by the runtime',function()
+ assert(backend.unsignedReads==0)
 end)
 test('missing required native API fails safely and enables native team list',function()
  dofile('user/team_compact.lua');T=RyzomTeamUI
