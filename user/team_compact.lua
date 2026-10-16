@@ -91,7 +91,7 @@ function T:interfaceXML()
  local a = {'<interface_config><root id="interface" x="0" y="0" w="800" h="600" active="true" />'}
  a[#a+1] = '<group id="padui_team_driver" w="1" h="1" active="true" use_cursor="false" child_resize_w="false" child_resize_h="false" posref="TL TL">'
  for i=0,7 do
-  a[#a+1] = '<view type="text_id" id="name_source'..i..'" textid="SERVER:GROUP:'..i..':NAME" dynamic_string="false" posref="TL TL" fontsize="10" color="0 0 0 0" shadow="false" global_color="false" />'
+  a[#a+1] = '<view type="text_id" id="name_source'..i..'" textid="0" dynamic_string="false" posref="TL TL" fontsize="10" color="0 0 0 0" shadow="false" global_color="false" />'
  end
  -- Root groups need an explicit tree entry for native draw/checkCoords.
  a[#a+1] = '</group><tree node="padui_team_driver" />'
@@ -178,11 +178,14 @@ function T:initUI()
  end
  T.driver, T.legacy = ui(DRIVER), legacy
  if not T.driver then error('Team controller not created') end
- T.sources, T.oldSources = {}, {}
+ T.sources, T.oldSources, T.nameRequests = {}, {}, {}
  for i=0,7 do
   T.sources[i] = ui(DRIVER..':name_source'..i)
   T.oldSources[i] = ui(LEGACY..':content:name_source'..i)
   if not T.sources[i] then error('Missing native team name source '..i) end
+  -- A previous test version bound this view to SERVER:GROUP. Never write its
+  -- textid: the native setter would write through that DB link. Restart first.
+  if T.sources[i].textid_dblink~='' then error('Team name widgets changed; fully restart Ryzom') end
  end
  for i=1,9 do
   local w = ui(CARD..i)
@@ -209,7 +212,7 @@ end
 function T:initCharacter(name)
  T:hideCards()
  T.menuMember=nil
- T.rows, T.members, T.ordered = {}, {}, {}
+ T.rows, T.members, T.ordered, T.nameRequests = {}, {}, {}, {}
  T.rosterKey, T.sortKey, T.layoutKey, T.geometryKey = nil,nil,nil,nil
  T.dragging, T.lastMode, T.pendingPositionSave = nil,nil,false
  for _,v in ipairs(T.cards) do v.key=nil;v.member=nil;v.cache={};v.x=nil;v.y=nil end
@@ -336,6 +339,30 @@ function T:setSort(mode)
 end
 function T:openSortMenu() end -- compatibility only; no on-window sort bar
 
+-- CViewTextID.textid is UInt32: the a8fb199cf6 Lua getter hits nlstop,
+-- even inside pcall. Its setter IS supported. These private text_id views have
+-- a numeric XML id (no DB binding), so assigning them cannot write SERVER data.
+-- Own request state replaces the unsafe getter; clear stale text on a change
+-- and let native checkCoords resolve it asynchronously. Never use changed()
+-- for textid because that helper reads a property before writing it.
+function T:memberName(index,nameId,uid)
+ local source=T.sources[index]
+ local request=T.nameRequests[index]
+ if not request or request.nameId~=nameId or request.uid~=uid then
+  source.textid=0
+  source.hardtext=''
+  if nameId~=0 then source.textid=nameId<0 and nameId+4294967296 or nameId end
+  T.nameRequests[index]={nameId=nameId,uid=uid}
+ end
+ if nameId==0 then return '' end
+ local name=clean(source.hardtext)
+ if name~='' then return name end
+ -- A member moved to another server group slot: keep its window/name while
+ -- this slot's resolver catches up, but only for the same UID AND name ID.
+ local previous=T.members['uid:'..uid]
+ return previous and previous.nameId==nameId and previous.name or ''
+end
+
 function T:collect(ownName)
  local out, live, roster, sort = {}, {}, {}, {}
  local ownLower=ownName:lower()
@@ -354,15 +381,12 @@ function T:collect(ownName)
  for index=0,7 do
   local p='SERVER:GROUP:'..index..':'
   local nameId=db(p..'NAME')
-  local source=T.sources[index]
-  -- Ignore the previous member's label until native text_id has processed NAME.
-  -- Its checkCoords clears the text while a new server string is unavailable.
-  local nativeId=nameId<0 and nameId+4294967296 or nameId
-  local name=nameId~=0 and source.textid==nativeId and clean(source.hardtext) or ''
+  local uid=db(p..'UID')
+  local name=T:memberName(index,nameId,uid)
   local old=T.oldSources[index]
   if old then changed(old,'hardtext',name) end -- target-of-target compatibility
   if name~='' and name:sub(1,1)~='#' and name:lower()~=ownLower then
-   local uid=db(p..'UID');local key='uid:'..uid
+   local key='uid:'..uid
    if not live[key] then
     local bars='UI:VARIABLES:BARS:TEAM:'..index..':'
     local h=db(bars..'HP')
