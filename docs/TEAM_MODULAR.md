@@ -2,151 +2,145 @@
 
 ## Bedienung
 
-Unter **PadUI Einstellungen > Anordnung** stehen drei Team-Modi zur Auswahl:
+Unter **PadUI Einstellungen > Anordnung**:
 
-- **Vertikal:** Spaltenzahl 1 bis 9. Die sortierten Mitglieder werden erst nach
-  unten, dann in der naechsten Spalte angezeigt. Sieben Mitglieder in zwei
-  Spalten ergeben vier links und drei rechts.
-- **Horizontal:** Zeilenzahl 1 bis 9. Die sortierten Mitglieder werden erst nach
-  rechts, dann in der naechsten Zeile angezeigt. Sieben Mitglieder in zwei
-  Zeilen ergeben vier oben und drei unten.
-- **Frei:** Jedes Mitgliedsfenster ist einzeln positionierbar. Laufende
-  HP-Aenderungen tauschen die Mitglieder nicht zwischen den Fensterplaetzen.
+- **Vertikal:** 1 bis 9 Spalten, erst nach unten, dann in die naechste Spalte.
+- **Horizontal:** 1 bis 9 Zeilen, erst nach rechts, dann in die naechste Zeile.
+- **Frei:** jedes Mitgliedsfenster separat platzieren. HP-Aenderungen tauschen
+  die Mitglieder nicht zwischen ihren Fensterplaetzen.
 
-Der vorhandene Team-Groessenregler bleibt erhalten (75 bis 150 Prozent).
-Die Sortierung nach Name, HP oder fehlenden HP sowie das Einblenden des eigenen
-Charakters bleiben im Reiter **Fenster**. Die alte untere Sortierleiste wird
-nicht mehr angezeigt. Itemleisten- und Timer-Einstellungen bleiben erhalten.
+Sieben Mitglieder mit zwei Spalten ergeben vier links und drei rechts;
+mit zwei Zeilen vier oben und drei unten. Der Groessenregler (75 bis 150
+Prozent), die Sortierung und die optionale Selbstanzeige bleiben erhalten.
+Die alte untere Sortierleiste bleibt entfernt.
 
-Positionen sind anfangs gesperrt. Zum Verschieben **Positionen gesperrt**
-anklicken und am schmalen linken Rand eines Mitgliedsfensters ziehen.
-Der restliche Bereich bleibt fuer Zielwahl und Rechtsklickmenue reserviert.
-In automatischen Modi bewegt dieser Griff das ganze Raster, in **Frei** nur
-sein Fenster. **Positionen zuruecksetzen** setzt die Ankerposition und alle
-neun freien Positionen zurueck, nicht Groesse oder Sortierung.
+### Name anklicken UND daran ziehen
 
-Nicht benoetigte Spalten/Zeilen werden nicht kuenstlich freigehalten. Ein zu
-breites/hohes Raster aendert die gewuenschte Spalten-/Zeilenzahl nicht heimlich:
-Es erscheint ein Hinweis, Groesse oder Rasterzahl anzupassen. Freie Fenster
-werden fuer die aktuelle Bildschirmgroesse im sichtbaren Bereich gehalten.
+**Ein kurzer Linksklick auf den Namen waehlt weiterhin das Mitglied aus.**
+Auch die HP-/Sap-/Ausdauerbalken und der restliche Fensterbereich bleiben
+anklickbar. Rechtsklick oeffnet weiterhin das Mitglieds-Kontextmenue.
 
-Freie Positionen werden pro Charakter und Fensterplatz gespeichert. Solange
-jemand im Team bleibt, bleibt die Zuordnung zu seinem Fenster stabil, auch
-wenn sich sein nativer Team-Index aendert. Frei gewordene Plaetze koennen neue
-Mitglieder aufnehmen. Nach einem frischen Login erfolgt die Erstzuordnung
-nach Namen; dies ist keine dauerhafte Positionsdatenbank fuer jeden Mitspieler.
-Ein Wechsel zu einem automatischen Modus ueberschreibt freie Positionen nicht.
+Zum Verschieben den vorhandenen Schalter auf **LOCK: Aus (ziehen)** stellen.
+Die Namenszeile wird dezent hinterlegt. Dort die linke Maustaste gedrueckt
+halten und bewegen. Erst ab vier UI-Pixeln Bewegung gilt die Geste als Ziehen;
+ein kleiner Wackler bleibt ein Klick. Nach einem Ziehvorgang wird beim
+Loslassen kein Mitglied ausgewaehlt, auch nicht beim Zurueckziehen zum Start.
+Eine lange gedrueckte Taste ohne Bewegung bleibt ebenfalls ein Klick.
 
-## Technischer Aufbau
+**LOCK: An (gesperrt)** verhindert das Verschieben, nicht die Zielwahl.
+Die Ressourcenbalken sind auch bei LOCK aus keine Ziehflaeche.
 
-Die bestehende `user/team_compact.lua` enthaelt den Controller und die
-XML-Vorlagen. Es gibt keine neue Laufzeitdatei und somit keine zusaetzliche
-Windows-Dateiverknuepfung. Der native XML-Parser registriert die Vorlagen und
-neun eigenstaendige `container` genau einmal pro UI-Lebensdauer.
+In Vertikal/Horizontal bewegt sich die gesamte Anordnung, in Frei nur das
+angefasste Fenster. Die beiden Positionssaetze werden getrennt gespeichert.
+**Positionen zuruecksetzen** betrifft den Rasteranker und freie Fensterplaetze,
+nicht Groesse, Sortierung oder Sichtbarkeit.
 
-`padui_team_member1` bis `padui_team_member9` sind Geschwister unter
-`ui:interface`, nicht Kinder eines grossen Team-Rahmens. Ihr Inhalt verwendet
-`no_bordure`; nur diese neun neuen Container erhalten lokale Rahmen-Alpha 0.
-Globale Transparenz- und Mouseover-Einstellungen werden nicht veraendert.
-Der freie linke Griff gehoert jeweils zur kleinen Fensterflaeche.
+Positionen gelten pro Charakter und Fensterplatz. Solange ein Mitglied im
+Team bleibt, bleibt seine Fensterzuordnung stabil. Nach einem frischen Login
+ist die Erstzuordnung nach Namen; es gibt keine dauerhafte Positionsdatenbank
+fuer jeden Mitspieler. Ein zu grosses Raster aendert die gewuenschte
+Zeilen-/Spaltenzahl nicht heimlich, sondern zeigt einen Hinweis.
 
-Ein unsichtbarer generischer Controller (`padui_team_driver`, 1 x 1,
-`use_cursor=false`, keine Texturen, transparente Namen ohne Schatten) besitzt
-**einen** Draw-Callback und acht native `text_id`-Quellen. Der schon vorhandene
-DB-Tick-Aufruf bleibt als Einstieg erhalten; der gemeinsame Smooth-Tick-Guard
-verhindert doppelte Datenscans im selben Tick. Es gibt keine Draw-Callbacks
-auf den neun einzelnen Fenstern und keine fortlaufende GUI-Erzeugung.
+## Aufbau und Eingabeverarbeitung
 
-Der alte `team_compact`-Container bleibt ausschliesslich als **inaktiver**
-Kompatibilitaetsschalter fuer den nativen Fenstermanager erhalten. Ein
-`on_active`-Handler schaltet die logische Team-Sichtbarkeit und deaktiviert den
-alten Container sofort wieder. Die PadUI-Einstellungsfunktionen werden einmal
-gezielt erweitert, statt die grosse bestehende XML-Datei zu duplizieren.
-Alte Namensquellen werden fuer die vorhandene Ziel-des-Ziels-Anzeige gespiegelt.
+`user/team_compact.lua` enthaelt weiterhin Controller und XML-Vorlagen.
+Es gibt **keine neue Laufzeitdatei und keinen neuen Windows-Symlink**.
+Neun root-level Container stehen nebeneinander unter `ui:interface`.
+Es existiert kein gemeinsames klickblockierendes Rechteck um das Raster.
+Der alte `team_compact`-Container ist nur noch ein inaktiver Kompatibilitaets-
+schalter fuer den nativen Fenstermanager.
 
-Die `UI:SAVE:PADUI:TEAM_MODULAR:*`-Properties werden bereits beim Laden der
-Lua-Datei angelegt, **vor** dem Einlesen der Charakter-Interfacekonfiguration.
-Das ist notwendig: `CInterfaceConfig::streamToDataBase()` stellt nur bereits
-existierende DB-Blattwerte wieder her. Dabei wird keine Spielerfunktion vor
-`game.InGameDbInitialized` aufgerufen. Native Container-Geometriespeicherung
-ist fuer die neuen Fenster abgeschaltet; freie Positionen und Raster-Anker
-werden getrennt in `UI:SAVE` gespeichert, nicht als Dateien geschrieben.
+Der unsichtbare 1x1-Controller mit `use_cursor=false` hat den einzigen neuen
+Frame-Callback. Die neun Mitgliederfenster werden einmal erzeugt und danach
+wiederverwendet. Der vorhandene DB-Tick-Einstieg teilt denselben Tick-Guard.
 
-## Aktualisierung und Sicherheit
+Das transparente native `target_button` deckt jetzt die ganze Mitgliedskarte
+ab, einschliesslich der Namenszeile. Es behaelt das native Mouse-Capture und
+die Klick-/Kontextmenuebehandlung. Die Fenster haben keinen konkurrierenden
+nativen Mover mehr (`movable=false`); der Controller setzt beim Ziehen die
+Positionen selbst. Auf native Root-Koordinaten wird weiterhin mit
+`nativeY = screenHeight + topOffset` umgerechnet.
 
-- Ein gemeinsamer Scan liest bis zu acht Teammitglieder und optional den
-  Spieler aus den vorhandenen Client-DB-Werten. Keine neuen Serveranfragen.
-- Mitgliederobjekte und native Fenster werden wiederverwendet. Sortiert wird
-  nur bei relevanten Aenderungen; im freien Modus nicht aufgrund von HP.
-- Skalierung und Fontauswahl laufen nur bei geaenderter Geometrieeinstellung.
-  Rasterpositionen werden nur bei geaendertem Layout/Anker/Reihenfolge gesetzt.
-- Identische Texte, Balkenbreiten und Farben loesen keine neuen Lua-UI-Setter
-  aus. Transparenzfarben und Uebersetzungen werden pro Renderdurchlauf geteilt.
-- Ein ausgeblendetes Team wird nicht fortlaufend gescannt. Verborgene
-  Mitgliedsfenster erhalten keine laufenden Balkenupdates.
-- Beim Ziehen werden Positionen gemeinsam nachgefuehrt; gespeichert wird nach
-  dem Loslassen, einschliesslich der letzten Mausposition, nicht pro Frame.
-- UID, Name-ID und Anwesenheit werden vor jeder Ziel-/Menueaktion erneut
-  validiert. Ein Kontextmenue speichert einen Snapshot statt eines mutierbaren
-  Mitgliederobjekts. Verzoegert aufgeloeste Namen werden nicht weiterverwendet.
-- Fehlt eine notwendige native API oder scheitert der Aufbau, wird ein Fehler
-  protokolliert und die native Teamliste als Rueckfall angezeigt.
+Der Controller liest `getMouseDown()` fuer die urspruengliche Druckposition
+und `getMousePos()` fuer die aktuelle Position. Eine Geste beginnt nur bei
+einem neuen Mausklick auf dem tatsaechlich obersten Mitgliedsfenster
+(`getCurrentWindowUnder()`); das Herueberziehen aus der Spielwelt oder von
+einem ueberdeckenden Einstellungsfenster startet keine Bewegung.
 
-`RyzomTeamUI.stats` zaehlt Datenscans, Sortierungen, Layoutdurchlaeufe,
-aktualisierte Eigenschaften und XML-Aufbauten, ohne laufende Logausgaben.
-Diese Zaehler sind keine FPS-Messung.
+Der Klick behaelt einen Snapshot aus UID, Name-ID und Teamindex. Bei
+Mitgliedswechsel, LOCK-/Layout-/Groessenaenderung oder Viewportwechsel wird
+eine laufende Geste abgebrochen. HP-Sortierung wird waehrend des Haltens
+zurueckgestellt. Erst der native Mouse-up-Klickhandler darf das Mitglied
+anvisieren: Ein Frame-Callback fuehrt niemals eine Zielwahl aus.
 
-## Automatische Tests
+## Performance, Speicherung und bisherige Korrekturen
+
+Ein gemeinsamer Durchlauf liest die vorhandenen lokalen Teamdaten; es gibt
+keine neuen Serveranfragen. Geometrie wird nur bei Skalierungs-/Schriftwechsel,
+Sortierung und Layout nur bei relevanten Aenderungen berechnet. Identische
+Texte, Farben und Balkenbreiten werden nicht wiederholt geschrieben.
+
+Beim Ziehen wird die kleine Anordnung nachgefuehrt, nicht fuer jedes Fenster
+noch einmal die ganze Gruppe abgefragt. Gespeichert wird nach dem Loslassen,
+nicht in jedem Frame. Ein ruhig gehaltenes Raster am Bildschirmrand loest
+keine fortlaufenden Layoutberechnungen aus.
+
+Die `UI:SAVE:PADUI:TEAM_MODULAR:*`-Properties werden vor dem Wiederherstellen
+der Charakterkonfiguration deklariert. Globale Alpha-/Mouseover-Einstellungen
+bleiben unangetastet. Ungebundene private Namensresolver verwenden nur den
+unterstuetzten UInt32-Setter, niemals den problematischen `textid`-Getter.
+
+Siehe [TEAM_JOIN_CRASH.md](TEAM_JOIN_CRASH.md) und
+[TEAM_VISIBILITY.md](TEAM_VISIBILITY.md) fuer die frueheren Korrekturen.
+Die Fenster werden nach dynamischer Erstellung weiterhin explizit geoeffnet.
+
+## Tests und Grenzen
 
 ```sh
 python3 tests/run_team_tests.py
-# oder den Lua-Interpreter explizit angeben:
+# Optional: vorhandenen Interpreter explizit angeben
 python3 tests/run_team_tests.py lua5.1
 ```
 
-Python benoetigt nur seine Standardbibliothek. Der Runner erzeugt XML mit der
-**tatsaechlichen** Lua-Funktion, prueft dessen Struktur und erstellt daraus die
-UI-Testdaten. Die Lua-Tests verwenden strikte UI-Stand-ins: Nicht exportierte
-Eigenschaften und Schreibzugriffe auf SERVER-Properties werden abgewiesen.
+Der Runner erzeugt XML mit der echten Laufzeitfunktion und erstellt daraus
+strikte native-interface Stand-ins. Die Tests unterscheiden aktive/geoeffnete
+Fenster, BL-TL-Koordinaten, abgewiesene UInt32-Lesezugriffe sowie die
+Druck-/Bewegungs-/Loslasspositionen einer Mausgeste.
 
-Lokal geprueft: XML-Struktur und **27 Regressionstests unter Lua 5.3 (texlua)**.
-Die Laufzeitdatei verwendet Lua-5.1-kompatible Syntax; ein echter Lua-5.1-Client
-wurde hier nicht gestartet. Abgedeckt sind alle Mitgliederzahlen 0 bis 9,
-beide Rasterrichtungen und Rasterzahlen 1 bis 9, freie Zuordnung, Verschieben,
-Maus-Loslassen, Reset, Skalierung, Sichtbarkeit, Namensauflosung,
-Gruppenwechsel, Kontextmenues, Modulneuladen, Charakterwechsel und die
-Deklaration der gespeicherten Properties vor der Konfigurationswiederherstellung.
+Beim Namensleisten-Umbau lokal ausgefuehrt: **55 Regressionstests unter
+Lua 5.3 (texlua)** plus XML- und Syntaxpruefung. Abgedeckt sind insbesondere
+Klick und Ziehen auf Namen, Klick auf Balken, LOCK an/aus, kleine Wackler,
+Ziehen und Zurueckziehen, sehr schnelle Klicks, verschiedene Release-Reihenfolgen,
+Gruppen-/Moduswechsel, Weltklicks und ueberdeckende Fenster. Die bisherigen
+Funktionen (0 bis 9 Mitglieder, Raster, Skalierung, asynchrone Namen,
+Zielpruefung, Sichtbarkeit, simulierter Neustart/Charakterwechsel) sind ebenfalls
+abgedeckt. 200 unveraenderte Updates schreiben keine UI-/Speicherwerte neu.
 
-Im unveraenderten Testzustand verursachen 200 weitere Aktualisierungen keine
-weiteren Sortierungen, Layoutberechnungen, UI-Setter oder Speicher-DB-Writes.
-Das ist ein Logiktest, **kein Benchmark des echten NeL-Renderers**.
+**Das sind keine Tests des echten NeL-Renderers, der OS-Mauseingabe oder einer
+realen .icfg-Datei.** Kein echter Lua-5.1-Client und kein FPS-Benchmark wurden
+hier ausgefuehrt. Laut Rueckmeldung funktionieren die Anzeige und der Wechsel
+zwischen Vertikal und Horizontal im Client; das neue Ziehen muss dort erst
+bestaetigt werden. Anschliessend auch Linux, Desktopwechsel, UI-Ausblenden,
+Bildschirmwechsel, volle Gruppe und Klicks durch Rasterluecken testen.
 
-## Noch im Spiel zu pruefen (vor Merge)
+## Testbranch unter Windows aktualisieren
 
-Windows und mindestens ein Linux-Client: volle Gruppe, alle drei Modi,
-Groessenregler und Schriftoptionen, Teamwechsel/KO/Abwesenheit, Ziele und
-Rechtsklickmenues. Fensterverwaltung sowie PadUI-Sichtbarkeit testen. An den
-freien Rasterstellen und zwischen Fenstern muessen Weltziele erreichbar sein.
-
-Griff verschieben, wieder sperren, zwischen allen Modi wechseln; danach den
-Client komplett neu starten und mit einem zweiten Charakter pruefen. Auch
-Aufloesungswechsel, native Desktopwechsel und das globale Ein-/Ausblenden der
-Oberflaeche testen. Maus-Capture, Texturrahmen, tatsaechliche `.icfg`-Dateien,
-Clientabstuerze und die reale Framerate sind durch Mock-Tests nicht belegt.
-
-## Testbranch unter Windows
-
-Ryzom vorher beenden. Vorhandene lokale Aenderungen nicht verwerfen.
+Ryzom vollstaendig beenden; kein reines Lua-Reload. Alte generierte Fenster
+werden anhand einer XML-Versionsmarkierung erkannt und verlangen einen Neustart.
+Bei Git-Fehlern stoppen; lokale Aenderungen nicht verwerfen.
 
 ```powershell
-git -C "$HOME\PadUI-Public" fetch origin
-git -C "$HOME\PadUI-Public" switch --track origin/feature/modular-team-windows
+git -C "$HOME\PadUI-Public" switch feature/modular-team-windows
+git -C "$HOME\PadUI-Public" pull --ff-only
+git -C "$HOME\PadUI-Public" log -1 --oneline
 ```
 
-Die vorhandenen Symlinks bleiben unveraendert. Zurueck zum bisherigen Stand:
+Die vorhandenen Symlinks bleiben unveraendert. Zurueck zum bisherigen Stand,
+ebenfalls bei geschlossenem Client:
 
 ```powershell
 git -C "$HOME\PadUI-Public" switch main
 ```
 
-Keine Backups in oder unter `Ryzom\user` ablegen.
+Danach ggf. Team unter Einstellungen > Fenster wieder einschalten und
+Vertikal/Horizontal auswaehlen. Keine Backups in oder unter `Ryzom\user` ablegen.

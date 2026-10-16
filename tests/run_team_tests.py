@@ -1,11 +1,9 @@
-"""Run the modular team regression suite with Lua 5.1+ (no game required).
+"""Validate runtime XML and run the modular team Lua regression suite.
 
 Usage: python3 tests/run_team_tests.py [lua-or-texlua-executable]
-Uses the real generated XML to build test fixtures. The native renderer,
-mouse capture and native saved-interface files still require in-game tests.
+These native-interface stand-ins do not replace Ryzom client tests.
 """
 from __future__ import annotations
-
 import json
 import pathlib
 import shutil
@@ -18,23 +16,19 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def quote(value: str) -> str:
-    # All XML values are ASCII. JSON string escapes also work for these in Lua.
     return json.dumps(value, ensure_ascii=False)
 
 
-def nodes(group: ET.Element, parent: str) -> dict[str, dict[str, object]]:
+def nodes(group: ET.Element, parent: str) -> dict:
     result = {}
     name = group.attrib.get("id")
-    if name is None:
-        raise AssertionError(f"Missing id: {group.tag}")
+    assert name is not None, f"Missing id: {group.tag}"
     path = f"{parent}:{name}"
-    props: dict[str, object] = dict(group.attrib)
-    props["id"] = path
-    props["tag"] = group.tag
+    props = dict(group.attrib, id=path, tag=group.tag)
     for key in ("x", "y", "w", "h", "fontsize", "line_maxw"):
         if key in props:
-            props[key] = int(str(props[key]))
-    for key in ("active", "locked", "use_cursor", "savable", "child_resize_h", "child_resize_w"):
+            props[key] = int(props[key])
+    for key in ("active", "opened", "locked", "movable", "use_cursor", "savable", "child_resize_h", "child_resize_w"):
         if key in props:
             props[key] = props[key] == "true"
     if group.tag == "view" and props.get("type") == "text_id":
@@ -65,10 +59,9 @@ def lua_table(value: object) -> str:
 
 def main() -> None:
     executable = sys.argv[1] if len(sys.argv) > 1 else next(
-        (found for name in ("lua5.1", "lua", "luajit", "texlua") if (found := shutil.which(name))), None
-    )
+        (found for name in ("lua5.1", "lua", "luajit", "texlua") if (found := shutil.which(name))), None)
     if executable is None:
-        raise SystemExit("Lua 5.1+ is required. Pass its executable as the first argument.")
+        raise SystemExit("Lua 5.1+ is required; pass the executable as the first argument.")
     with tempfile.TemporaryDirectory(prefix="padui-team-test-") as directory:
         temp = pathlib.Path(directory)
         emit = temp / "emit.lua"
@@ -77,26 +70,29 @@ def main() -> None:
         root = ET.fromstring(generated)
         assert root.tag == "interface_config"
         groups = root.findall("group")
-        assert len(groups) == 10, "One inert driver and exactly nine independent members"
+        assert len(groups) == 10, "Exactly one driver and nine independent windows"
         driver, *members = groups
         assert driver.attrib["use_cursor"] == "false"
         assert driver.attrib["w"] == driver.attrib["h"] == "1"
+        assert driver.find("group[@id='name_drag_v1']") is not None
         assert len(driver.findall("view")) == 8
         for source in driver.findall("view"):
-            assert source.attrib["textid"] == "0", "Private name resolvers must not bind to SERVER"
+            assert source.attrib["textid"] == "0", "Never bind private name resolvers to SERVER"
             assert source.attrib["dynamic_string"] == "false"
-        assert {g.attrib["id"] for g in members} == {f"padui_team_member{i}" for i in range(1, 10)}
-        # Generic root groups also require registration to run native draw/checkCoords.
+        assert {g.attrib["id"] for g in members} == {f"padui_team_member{i}" for i in range(1,10)}
         assert {t.attrib["node"] for t in root.findall("tree")} == {g.attrib["id"] for g in groups}
         assert "sort_controls" not in generated and "footer" not in generated
         for member in members:
             assert member.attrib["options"] == "no_bordure"
             assert member.attrib["savable"] == "false"
+            assert member.attrib["posref"] == "BL TL"
+            assert member.attrib["movable"] == "false", "Native mover must not compete with click/drag button"
             header = member.find("group[@id='header_opened']")
             assert header is not None
             target = header.find("ctrl[@id='target_button']")
-            assert target is not None and target.attrib["x"] == "7"
-            assert int(target.attrib["x"]) + int(target.attrib["w"]) == int(member.attrib["w"])
+            assert target is not None and target.attrib["x"] == target.attrib["y"] == "0"
+            assert target.attrib["w"] == member.attrib["w"] and target.attrib["h"] == member.attrib["h"]
+            assert target.attrib["onclick_l"] == target.attrib["onclick_r"] == "lua"
             for score in ("hp", "sap", "sta"):
                 assert header.find(f"view[@id='{score}_fill']") is not None
         root_nodes = {}
@@ -110,8 +106,8 @@ def main() -> None:
         assert panel is not None
         panel_nodes = nodes(panel, "ui:interface:padui_settings:content:page3")
         fixture = temp / "fixture.lua"
-        fixture.write_text("return " + lua_table({"roots": root_nodes, "panel": panel_nodes}), encoding="utf-8")
-        print(f"PASS generated XML: {len(members)} separate containers, {len(root_nodes)} nodes, no footer", flush=True)
+        fixture.write_text("return " + lua_table({"roots":root_nodes,"panel":panel_nodes}), encoding="utf-8")
+        print("PASS XML: nine independent windows, full-card target buttons, unbound name resolvers", flush=True)
         subprocess.run([executable, str(ROOT / "tests/test_team_modular.lua"), str(fixture)], cwd=ROOT, check=True)
 
 

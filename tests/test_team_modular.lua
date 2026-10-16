@@ -1,518 +1,433 @@
--- Regression tests with strict native-UI stand-ins; not a NeL renderer test.
-local fixture=dofile(assert(arg[1], 'Run through tests/run_team_tests.py'))
-local U,D,strings,actions,hooks={}, {}, {}, {}, {}
-local ownName,mouse,sw,sh='SelfTest',false,1920,1080
-local backend={writes=0,dbWrites=0,lookups=0,parses=0,panels=0,unsignedReads=0,textidSets=0}
+-- Native-behavior stand-ins, NOT a Ryzom renderer or OS mouse-capture test.
+local fixture=dofile(assert(arg[1],'Run through tests/run_team_tests.py'))
+local U,R,D,strings,actions,hooks={},{},{},{},{},{}
 local SAVE='UI:SAVE:PADUI:TEAM_MODULAR:'
 local LEGACY='ui:interface:team_compact'
 local DRIVER='ui:interface:padui_team_driver'
-local PAGE='ui:interface:padui_settings:content:page3'
 local CARD='ui:interface:padui_team_member'
-local copy
-copy=function(t) local c={};for k,v in pairs(t) do c[k]=type(v)=='table' and copy(v) or v end;return c end
-local exported={id=true,active=true,opened=true,x=true,y=true,w=true,h=true,x_real=true,y_real=true,w_real=true,h_real=true,locked=true,hardtext=true,textid=true,textid_dblink=true,color=true,tooltip=true,on_active=true,on_active_params=true,on_deactive=true,on_deactive_params=true}
-local raw={}
-local nativeLayout
+local PAGE='ui:interface:padui_settings:content:page3'
+local ownName,sw,sh='SelfTest',1920,1080
+local mouse,px,py,mx,my,over,caller,capture=false,-1,-1,-1,-1,nil,nil,nil
+local stats={writes=0,dbWrites=0,parses=0,panels=0,unsignedReads=0,idSets=0}
 local execute=loadstring or load
-local function node(id,attrs)
- local p=copy(attrs or {})
- p.id=id
- p.textid_dblink=p.dbBinding or ''
- p.initialized=false
- if p.type=='container' then
-  -- parse(opened) stores OpenAtStart; dynamic parsing does not call launch.
-  p.openAtStart=p.opened=='true' or p.opened==true
-  p.opened=false;p.nativeSetup=false
+local exported={id=true,active=true,opened=true,locked=true,movable=true,x=true,y=true,w=true,h=true,x_real=true,y_real=true,w_real=true,h_real=true,
+ hardtext=true,textid=true,textid_dblink=true,color=true,tooltip=true,on_active=true,on_active_params=true,on_deactive=true,on_deactive_params=true}
+local function nativeCoords()
+ for i=1,9 do
+  local id=CARD..i;local p=R[id]
+  if p and p.setup then
+   local h=R[id..':header_opened']
+   p.w_real=p.w;p.h=h.h;p.h_real=h.h
+   p.x_real=p.x;p.y_real=p.y-p.h_real
+   h.active=p.opened;h.x_real=p.x;h.y_real=p.y-h.h;h.w_real=p.w;h.h_real=h.h
+   local b=R[id..':header_opened:target_button']
+   b.x_real=h.x_real+b.x;b.y_real=p.y+b.y-b.h;b.w_real=b.w;b.h_real=b.h
+  end
  end
+end
+local function add(id,attrs)
+ local p={};for k,v in pairs(attrs or {}) do p[k]=v end
+ p.id=id;p.textid_dblink=p.dbBinding or '';p.initialized=false
  for _,k in ipairs({'x','y','w','h','x_real','y_real','w_real','h_real','textid'}) do p[k]=p[k] or 0 end
+ for _,k in ipairs({'hardtext','color','tooltip','on_active','on_active_params','on_deactive','on_deactive_params'}) do p[k]=p[k] or '' end
  if p.active==nil then p.active=true end
  if p.locked==nil then p.locked=false end
- for _,k in ipairs({'hardtext','color','tooltip','on_active','on_active_params','on_deactive','on_deactive_params'}) do p[k]=p[k] or '' end
+ -- Dynamic XML stores OpenAtStart; it does NOT open the container.
+ if p.type=='container' then p.opened=false;p.setup=false end
  local methods={
-  find=function(self,child) return U[id..':'..child] end,
-  addGroup=function(self,child) assert(U[child.id]);p.added=child.id end,
-  invalidateCoords=function() p.invalid=(p.invalid or 0)+1 end,
-  updateCoords=function() nativeLayout(id) end,
-  setLineMaxW=function(self,w) assert(type(w)=='number');p.lineMaxW=w;backend.writes=backend.writes+1 end
+  find=function(_,child)return U[id..':'..child]end,
+  addGroup=function(_,child)assert(U[child.id])end,
+  setLineMaxW=function(_,v)assert(type(v)=='number');stats.writes=stats.writes+1 end,
+  invalidateCoords=function()end,
+  updateCoords=function()p.setup=true;nativeCoords()end
  }
  local obj=setmetatable({}, {
-  __index=function(_,key)
-   -- Live Ryzom supports UInt32 setters, but its Lua getter calls nlstop.
-   if key=='textid' then
-    backend.unsignedReads=backend.unsignedReads+1
-    error('UInt32 textid getter triggers native STOP in a8fb199cf6')
-   end
-   if methods[key] then return methods[key] end
-   assert(exported[key], 'Unexported Lua UI property '..tostring(key)..' on '..id)
-   return p[key]
+  __index=function(_,k)
+   if k=='textid' then stats.unsignedReads=stats.unsignedReads+1;error('UInt32 getter triggers native STOP') end
+   if methods[k] then return methods[k] end
+   assert(exported[k],'Unexported property '..tostring(k)..' on '..id)
+   return p[k]
   end,
-  __newindex=function(_,key,value)
-   assert(exported[key], 'Unexported Lua UI property '..tostring(key)..' on '..id)
-   if key=='textid' then
-    assert(p.type=='text_id' and p.textid_dblink=='', 'Do not assign a DB-bound textid')
-    assert(type(value)=='number' and value==math.floor(value) and value>=0 and value<=4294967295)
-    if value~=p.textid then p.initialized=false end
-    backend.textidSets=backend.textidSets+1
+  __newindex=function(_,k,v)
+   assert(exported[k],'Unexported property '..tostring(k)..' on '..id)
+   if k=='textid' then
+    assert(p.type=='text_id' and p.textid_dblink=='','DB-bound text ID write')
+    assert(type(v)=='number' and v>=0 and v<=4294967295 and v==math.floor(v))
+    if p.textid~=v then p.initialized=false end
+    stats.idSets=stats.idSets+1
    end
-   local old=p[key];p[key]=value;backend.writes=backend.writes+1
-   if key=='opened' and p.nativeSetup then
-    raw[id..':header_opened'].active=value
-    raw[id..':header_closed'].active=not value
-    raw[id..':content'].active=value
-   end
-   if key=='active' and old~=value then
-    local handler=value and p.on_active or p.on_deactive
-    local params=value and p.on_active_params or p.on_deactive_params
-    if handler=='lua' and params~='' then assert(execute(params))() end
+   if k=='opened' then assert(p.setup,'Open before native setup') end
+   local old=p[k];p[k]=v;stats.writes=stats.writes+1
+   if k=='opened' then nativeCoords() end
+   if k=='active' and old~=v then
+    local ah=v and p.on_active or p.on_deactive
+    local params=v and p.on_active_params or p.on_deactive_params
+    if ah=='lua' and params~='' then assert(execute(params))() end
    end
   end
  })
- U[id]=obj
- return obj,p
-end
-local function add(id,props) local n,p=node(id,props);raw[id]=p;return n end
--- A focused model of a8fb199cf6 CGroupContainer::setup/open/updateCoords.
--- It models open-vs-active, native root hotspots and clipping, NOT rendering.
-nativeLayout=function(id)
- local p=raw[id]
- if not p or p.type~='container' then return end
- local header=raw[id..':header_opened']
- local closed=raw[id..':header_closed']
- if not p.nativeSetup then
-  p.nativeSetup=true;p.posref='BL TL'
-  header.active=p.opened;closed.active=not p.opened
-  raw[id..':content'].active=p.opened
- end
- -- These test cards use borderless layer metrics and a zero-height content.
- p.h=p.opened and header.h or closed.h
- if p.w<=sw and p.h<=sh then
-  p.x=math.max(0,math.min(sw-p.w,p.x))
-  p.y=math.max(p.h,math.min(sh,p.y))
- end
- p.x_real=p.x;p.y_real=p.y-p.h;p.w_real=p.w;p.h_real=p.h
-end
-local function nativeFrame()
- for i=1,9 do if raw[CARD..i] then nativeLayout(CARD..i) end end
+ U[id],R[id]=obj,p
+ return obj
 end
 local function materialize(def)
- for id,props in pairs(def) do assert(not U[id], 'duplicate native id '..id);add(id,props) end
+ for id,p in pairs(def) do assert(not U[id],'Duplicate UI id');add(id,p) end
 end
-function getUI(id) backend.lookups=backend.lookups+1;return U[id] end
-function getDbProp(p) return D[p] or 0 end
-function addDbProp(p,v) assert(p:match('^UI:SAVE:'),p);D[p]=v end
-function setDbProp(p,v)
- assert(p:match('^UI:'), 'SERVER write '..p)
- assert(D[p]~=nil, 'undeclared DB '..p)
- D[p]=v;backend.dbWrites=backend.dbWrites+1
+function getUI(id)return U[id]end
+function getDbProp(p)return D[p] or 0 end
+function addDbProp(p,v)assert(p:match('^UI:SAVE:'));D[p]=v end
+function setDbProp(p,v)assert(p:match('^UI:') and D[p]~=nil,'Invalid DB write '..p);D[p]=v;stats.dbWrites=stats.dbWrites+1 end
+function isPlayerReady()return game.InGameDbInitialized end
+function getPlayerName()assert(isPlayerReady(),'Early player access');return ownName end
+function getTargetName()return 'No target'end
+function getWindowSize()return sw,sh end
+function getMouseDown()return mouse,px,py end
+function getMousePos()return mx,my end
+function getCurrentWindowUnder()return over end
+function getUICaller()return caller end
+function debugInfo()end
+function displaySystemInfo()end
+function setOnDraw(w,s)hooks[w.id]=s end
+function parseInterfaceFromString(s)
+ assert(s:find('padui_team_member9',1,true));materialize(fixture.roots);stats.parses=stats.parses+1;return true
 end
-function getPlayerName() assert(game.InGameDbInitialized,'early player access');return ownName end
-function isPlayerReady() return game.InGameDbInitialized end
-function getTargetName() return 'No target' end
-function getWindowSize() return sw,sh end
-function getMouseDown() return mouse end
-function getUICaller() return nil end
-function debugInfo() end
-function displaySystemInfo() end
-function setOnDraw(w,code) assert(w);hooks[w.id]=code end
-function parseInterfaceFromString(xml)
- assert(xml:find('padui_team_member9',1,true))
- backend.parses=backend.parses+1;materialize(fixture.roots);return true
-end
-function createGroupInstance(name,parent,params)
+function createGroupInstance(name,parent)
  assert(name=='padui_modular_team_settings' and parent==PAGE)
- backend.panels=backend.panels+1;materialize(fixture.panel)
- return U[PAGE..':modular_team']
+ materialize(fixture.panel);stats.panels=stats.panels+1;return U[PAGE..':modular_team']
 end
-function runAH(caller,handler,params)
- actions[#actions+1]={handler,params}
- assert(handler~='set' or not params:find('SERVER:',1,true),'SERVER action')
+function runAH(_,ah,params)
+ assert(not params:find('SERVER:',1,true),'Never write SERVER through an action')
+ actions[#actions+1]={ah,params}
 end
-PadUI={language=function()return 'en'end,accent=function(_,alpha)return '110 235 225 '..tostring(alpha or 255)end,tr=function(_,key)return key end}
-PadUISettings={windows={{'team_compact','TEAM_COMPACT','team'}},texts=function()return {team='Team'}end,withTransparency=function(_,c)return c end,
- refresh=function()
-  U['ui:interface:padui_settings:content:page1:window1_text'].hardtext=U[LEGACY].active and '[x] Team' or '[ ] Team'
- end,
- toggleWindow=function() error('Legacy toggle must be intercepted') end}
+PadUI={language=function()return 'en'end,accent=function(_,a)return '110 235 225 '..tostring(a or 255)end,tr=function(_,k)return k end}
+PadUISettings={windows={{'team_compact','TEAM_COMPACT','team'}},texts=function()return {team='Team'}end,withTransparency=function(_,v)return v end,
+ refresh=function()U['ui:interface:padui_settings:content:page1:window1_text'].hardtext=U[LEGACY].active and '[x] Team' or '[ ] Team'end,
+ toggleWindow=function()error('Legacy toggle not intercepted')end}
 game={InGameDbInitialized=false}
 add(LEGACY,{active=true,x_real=24,y_real=900,h_real=50})
-for i=0,7 do add(LEGACY..':content:name_source'..i,{hardtext=''}) end
-add('ui:interface:team_list',{active=false})
-add(PAGE,{})
+for i=0,7 do add(LEGACY..':content:name_source'..i,{})end
+add('ui:interface:team_list',{active=false});add(PAGE,{})
 add('ui:interface:padui_settings:content:page1:window1_text',{})
-for _,id in ipairs({'team_layout_text','team_layout0','team_layout0_text','team_layout0_back','team_layout1','team_layout1_text','team_layout1_back','team_scale_slider','team_scale_text','team_scale_value','item_layout_text','timer_scale_text','timer_scale_slider','timer_scale_value','layout_note'}) do add(PAGE..':'..id,{}) end
-for i=0,2 do for _,suffix in ipairs({'','_back','_text'}) do add(PAGE..':item_layout'..i..suffix,{}) end end
-D['UI:VARIABLES:ISACTIVE:TEAM_COMPACT']=1
-D['UI:SAVE:PADUI:TEAM_SCALE']=100
-D['UI:SAVE:PADUI:TEAM_LAYOUT']=0
-D['UI:SAVE:PADUI:HIDE_SELF']=0
-D['UI:SAVE:TEAM_COMPACT:SORT']=0
-D['UI:VARIABLES:USER:HP_RATIO']=1024
-D['UI:VARIABLES:USER:SAP_RATIO']=1024
-D['UI:VARIABLES:USER:STA_RATIO']=1024
+for _,id in ipairs({'team_layout_text','team_layout0','team_layout0_text','team_layout0_back','team_layout1','team_layout1_text','team_layout1_back','team_scale_text','team_scale_slider','team_scale_value','item_layout_text','timer_scale_text','timer_scale_slider','timer_scale_value','layout_note'})do add(PAGE..':'..id,{})end
+for i=0,2 do for _,suffix in ipairs({'','_back','_text'})do add(PAGE..':item_layout'..i..suffix,{})end end
+D['UI:VARIABLES:ISACTIVE:TEAM_COMPACT']=1;D['UI:SAVE:PADUI:TEAM_SCALE']=100;D['UI:SAVE:PADUI:TEAM_LAYOUT']=0
+D['UI:SAVE:PADUI:HIDE_SELF']=0;D['UI:SAVE:TEAM_COMPACT:SORT']=0;D['UI:SAVE:PADUI:FONT_DELTA']=0
+for _,k in ipairs({'HP','SAP','STA'})do D['UI:VARIABLES:USER:'..k..'_RATIO']=1024 end
 D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=0
 local function syncNames()
  for i=0,7 do
-  local n=raw[DRIVER..':name_source'..i]
-  if n then
-   -- Simulate native checkCoords, not a Lua read of the UInt32 property.
-   if n.textid_dblink~='' then
-    local id=D[n.textid_dblink] or 0
-    if id<0 then id=id+4294967296 end
-    if id~=n.textid then n.initialized=false end
-    n.textid=id
-   end
-   if not n.initialized then
-    n.hardtext=strings[n.textid] or ''
-    n.initialized=strings[n.textid]~=nil
-   end
-  end
+  local n=R[DRIVER..':name_source'..i]
+  if n and not n.initialized then n.hardtext=strings[n.textid] or '';n.initialized=strings[n.textid]~=nil end
  end
 end
-local function frame()
- D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100
- nativeFrame();syncNames();RyzomTeamUI:update();nativeFrame()
+local function frame(sameTick)
+ if not sameTick then D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100 end
+ nativeCoords();syncNames();RyzomTeamUI:update();nativeCoords()
  assert(not RyzomTeamUI.failed,RyzomTeamUI.failed)
 end
 local function populate(n)
  for i=0,7 do
   local p='SERVER:GROUP:'..i..':'
-  D[p..'NAME']=i<n and 100+i or 0
-  D[p..'UID']=i<n and 200+i or 0
-  D[p..'PRESENT']=1
+  D[p..'NAME']=i<n and 100+i or 0;D[p..'UID']=i<n and 200+i or 0;D[p..'PRESENT']=1
   strings[100+i]='Member'..i
-  for _,score in ipairs({'HP','SAP','STA'}) do D['UI:VARIABLES:BARS:TEAM:'..i..':'..score]=127 end
+  for _,k in ipairs({'HP','SAP','STA'})do D['UI:VARIABLES:BARS:TEAM:'..i..':'..k]=127 end
  end
 end
-local count=0
-local function test(name,fn)
- local ok,err=pcall(fn)
- if not ok then error('FAIL '..name..': '..tostring(err)) end
- count=count+1;print('PASS '..name)
-end
+local function member(uid)for _,v in ipairs(RyzomTeamUI.cards)do if v.member and v.member.uid==uid then return v end end end
 local function visible()
- nativeFrame()
  local n=0
  for i=1,9 do
-  local p=raw[CARD..i];local header=raw[CARD..i..':header_opened']
-  if p and p.active and p.opened and header.active and p.h>0
-   and p.x_real<sw and p.x_real+p.w_real>0 and p.y_real<sh and p.y_real+p.h_real>0 then n=n+1 end
+  local p=R[CARD..i];local h=R[CARD..i..':header_opened']
+  if p and p.active and p.opened and h.active and p.h_real>0 and p.y_real>=0 and p.y_real+p.h_real<=sh then n=n+1 end
  end
  return n
 end
-local function memberView(uid) for _,v in ipairs(RyzomTeamUI.cards) do if v.member and v.member.uid==uid then return v end end end
-local function snapshot(t) return t.stats.sorts,t.stats.layouts,backend.writes,backend.dbWrites end
-populate(0)
-dofile('user/team_compact.lua')
+local function state()local t=RyzomTeamUI;return {t.stats.sorts,t.stats.layouts,stats.writes,stats.dbWrites,stats.idSets}end
+local function unchanged(a)local b=state();for i=1,#a do assert(a[i]==b[i],'State counter '..i..' changed')end end
+local function hit(b,x,y)return b and b.active and x>=b.x_real and x<b.x_real+b.w_real and y>b.y_real and y<=b.y_real+b.h_real end
+local function press(v,offsetY,doFrame)
+ nativeCoords();local b=R[v.nodes.target_button.id]
+ px=b.x_real+30;py=b.y_real+b.h_real-(offsetY or 5)
+ mx,my,mouse,over,capture=px,py,true,v.window,v.nodes.target_button
+ if doFrame~=false then frame(true)end
+end
+local function move(dx,dy,doFrame)
+ mx,my=px+dx,py+dy
+ if doFrame~=false then frame(true)end
+end
+local function release(doClick,frameFirst)
+ mouse=false
+ if frameFirst then frame(true)end
+ if doClick~=false and capture then
+  local b=R[capture.id]
+  local winId=capture.id:match('^(.-):header_opened:')
+  if R[winId].active and hit(b,mx,my) then
+   caller=capture;assert(execute(b.params_l))();caller=nil
+  end
+ end
+ capture=nil;frame(true)
+end
+local function unlock(t)if D[SAVE..'LOCKED']==1 then t:toggleLock();nativeCoords()end end
+local function lock(t)if D[SAVE..'LOCKED']==0 then t:toggleLock();nativeCoords()end end
+local count=0
+local function test(name,fn)
+ local ok,err=pcall(fn);if not ok then error('FAIL '..name..': '..tostring(err))end
+ count=count+1;print('PASS '..name)
+end
+populate(0);dofile('user/team_compact.lua')
 local T=RyzomTeamUI
 
-test('startup guard makes no early player/native GUI call',function()
- T:update();assert(backend.parses==0 and next(T.cards)==nil)
-end)
-test('balanced layouts for every count and every track count',function()
+test('startup guard makes no early player/native GUI calls',function()T:update();assert(stats.parses==0)end)
+test('all balanced layouts: 0..9 members, both directions, 1..9 tracks',function()
  for n=0,9 do for mode=0,1 do for tracks=1,9 do
   local p,c,r=T:grid(n,mode,tracks);assert(#p==n)
-  if n==0 then assert(c==0 and r==0) else
-   assert((mode==0 and c or r)==math.min(n,tracks))
-   local seen,previous={},nil
-   for i,v in ipairs(p) do
-    assert(v.x>=0 and v.y>=0 and v.x<c and v.y<r)
-    local key=v.x..':'..v.y;assert(not seen[key]);seen[key]=true
-    if previous then
-     assert(mode==0 and (v.x>previous.x or v.y==previous.y+1) or mode==1 and (v.y>previous.y or v.x==previous.x+1))
-    end
-    previous=v
-   end
+  if n==0 then assert(c==0 and r==0)else
+   assert((mode==0 and c or r)==math.min(n,tracks));local used={}
+   for _,v in ipairs(p)do local k=v.x..':'..v.y;assert(not used[k] and v.x<c and v.y<r);used[k]=true end
   end
  end end end
- local v=T:grid(7,0,2);assert(v[4].x==0 and v[4].y==3 and v[5].x==1 and v[5].y==0)
- local h=T:grid(7,1,2);assert(h[4].x==3 and h[4].y==0 and h[5].x==0 and h[5].y==1)
+ local p=T:grid(7,0,2);assert(p[4].y==3 and p[5].x==1)
+ p=T:grid(7,1,2);assert(p[4].x==3 and p[5].y==1)
 end)
-test('nine native windows allocated once, single frame controller',function()
+test('nine reused native windows, explicitly opened, one frame controller',function()
  game.InGameDbInitialized=true;frame();frame()
- assert(T.uiReady and backend.parses==1 and backend.panels==1)
- assert(visible()==1 and not U[LEGACY].active)
+ assert(visible()==1 and stats.parses==1 and stats.panels==1)
+ for _,v in ipairs(T.cards)do assert(v.window.opened and not v.window.movable)end
  assert(hooks[DRIVER]=='RyzomTeamUI:update()' and hooks[LEGACY]=='')
- local n=0;for _,s in pairs(hooks) do if s~='' then n=n+1 end end;assert(n==1)
 end)
-test('dynamic containers are explicitly opened, not just marked active',function()
- for i=1,9 do
-  local p=raw[CARD..i]
-  assert(p.openAtStart and p.opened==true and p.nativeSetup)
-  assert(raw[CARD..i..':header_opened'].active)
- end
+test('visibility checkbox and native window-manager toggle agree',function()
+ PadUISettings:refresh();assert(U['ui:interface:padui_settings:content:page1:window1_text'].hardtext=='[x] Team')
+ PadUISettings:toggleWindow(1);assert(visible()==0)
+ U[LEGACY].active=true;nativeCoords();assert(visible()==1 and not U[LEGACY].active)
 end)
-test('native BL TL position equals screen height plus saved top offset',function()
- local v=T.cards[T.ordered[1].viewSlot];local p=raw[v.window.id]
- assert(p.posref=='BL TL' and p.y==sh+v.y)
- assert(p.y_real==sh+v.y-T.cellH and p.h_real==T.cellH)
- assert(v.y==T.anchorY and p.y>p.h_real)
+test('hidden team stops collecting data',function()
+ T:toggle();local n=T.stats.polls;for i=1,20 do frame()end;assert(T.stats.polls==n);T:toggle();nativeCoords()
 end)
-test('old visibility and settings checkbox are kept coherent',function()
- PadUISettings:refresh()
- assert(U['ui:interface:padui_settings:content:page1:window1_text'].hardtext=='[x] Team')
- PadUISettings:toggleWindow(1);assert(visible()==0 and D['UI:VARIABLES:ISACTIVE:TEAM_COMPACT']==0)
- U[LEGACY].active=true;assert(visible()==1 and not U[LEGACY].active)
- assert(D['UI:VARIABLES:ISACTIVE:TEAM_COMPACT']==1)
-end)
-test('hidden team does not scan member data',function()
- T:toggle();local n=T.stats.polls
- for i=1,20 do frame() end
- assert(T.stats.polls==n and visible()==0)
- T:toggle();assert(visible()==1)
-end)
-test('generated callbacks compile and layout labels support DE/EN/FR',function()
- for _,def in ipairs({fixture.roots,fixture.panel}) do
-  for id,p in pairs(def) do for _,side in ipairs({'l','r'}) do
-   if p['onclick_'..side]=='lua' then assert(execute(p['params_'..side])) end
-  end end
- end
- for _,lang in ipairs({'de','fr','en'}) do
-  PadUI.language=function()return lang end
-  PadUISettings:refresh()
-  assert(#U[PAGE..':modular_team:mode2:text'].hardtext>0)
- end
-end)
-test('team invitation resolves names without reading reflected UInt32',function()
- assert(visible()==1)
- populate(1);strings[100]=nil
- local namesBefore=backend.unsignedReads
- frame();assert(not memberView(200))
- for i=1,3 do frame();assert(not memberView(200)) end
- strings[100]='Member0';frame()
- assert(memberView(200).member.name=='Member0' and visible()==2)
- assert(backend.unsignedReads==namesBefore and namesBefore==0)
- populate(0);frame();assert(visible()==1)
-end)
-test('client-signed high-bit name IDs use unsigned setter without SERVER writes',function()
- populate(1)
- D['SERVER:GROUP:0:NAME']=-2147483647
- strings[2147483649]='HighBitName'
- frame();frame()
- assert(memberView(200).member.name=='HighBitName')
- assert(raw[DRIVER..':name_source0'].textid==2147483649)
- assert(D['SERVER:GROUP:0:NAME']==-2147483647)
- populate(0);frame()
-end)
-test('rapid slot reuse with identical label does not keep the old identity',function()
- populate(1);frame();frame()
- local old=copy(memberView(200).member)
- D['SERVER:GROUP:0:UID']=777;D['SERVER:GROUP:0:NAME']=777
- strings[777]='Member0'
- D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100
- T:update();assert(not memberView(777) and not T:validMember(old))
- -- Return to the original name ID before native name resolution runs.
- D['SERVER:GROUP:0:UID']=778;D['SERVER:GROUP:0:NAME']=100
- D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100
- T:update();assert(not memberView(778))
- frame();assert(memberView(778).member.name=='Member0' and not memberView(200))
- populate(0);frame()
-end)
-test('all group sizes including empty group with self hidden',function()
- for n=0,8 do populate(n);frame();frame();assert(visible()==n+1) end
- T:toggleSelf();assert(visible()==8)
- populate(0);frame();assert(visible()==0)
- T:toggleSelf();populate(8);frame();frame();assert(visible()==9)
- assert(backend.parses==1 and backend.panels==1)
-end)
-test('steady state causes no extra sort, layout, UI setters or DB writes',function()
- frame();local sorts,layouts,writes,dbw=snapshot(T)
- local idsets=backend.textidSets
- for i=1,200 do frame() end
- assert(T.stats.sorts==sorts and T.stats.layouts==layouts)
- assert(backend.writes==writes,'redundant UI property writes')
- assert(backend.dbWrites==dbw,'writes to saved configuration while idle')
- assert(backend.textidSets==idsets and backend.unsignedReads==0)
-end)
-test('second hook in same tick never repeats data collection',function()
- local polls=T.stats.polls
- T:update();T:update();assert(T.stats.polls==polls)
-end)
-test('HP change updates bars, without layout or name sort',function()
- local v=memberView(200);assert(v)
- local layouts,sorts=T.stats.layouts,T.stats.sorts
- local oldWidth=v.nodes.hp_fill.w
- D['UI:VARIABLES:BARS:TEAM:0:HP']=64;frame()
- assert(v.nodes.hp_fill.w<oldWidth)
- assert(T.stats.layouts==layouts and T.stats.sorts==sorts)
-end)
-test('HP sorting moves windows but preserves member-window identities',function()
- T:setSort('hp');local v=memberView(200);local slot=v.slot
- D['UI:VARIABLES:BARS:TEAM:0:HP']=1;frame()
- assert(memberView(200).slot==slot)
- assert(T.ordered[#T.ordered].uid==200)
- local s,l=T.stats.sorts,T.stats.layouts
- D['UI:VARIABLES:BARS:TEAM:0:HP']=2;frame()
- assert(T.stats.sorts==s+1 and T.stats.layouts==l,'same order must not relayout')
-end)
-test('horizontal/vertical track controls produce requested arrangement',function()
- T:setSort('name');T:setLayout(0)
- T:changeTracks(1);assert(T:trackCount(0)==2)
- local a,b=T.cards[T.ordered[1].viewSlot],T.cards[T.ordered[2].viewSlot]
- assert(a.x==b.x and b.y<a.y)
- T:setLayout(1);assert(T:trackCount(1)==2)
- assert(T.cards[T.ordered[1].viewSlot].y==T.cards[T.ordered[2].viewSlot].y)
- for i=1,15 do T:changeTracks(1) end;assert(T:trackCount(1)==9)
- for i=1,15 do T:changeTracks(-1) end;assert(T:trackCount(1)==1)
-end)
-test('free mode never swaps members on HP changes and restores placement',function()
- T:setLayout(2);local v=memberView(200);local x,y=v.x,v.y
- T:setSort('missing')
- D['UI:VARIABLES:BARS:TEAM:0:HP']=127;frame()
- assert(memberView(200)==v and v.x==x and v.y==y)
- T:setLayout(0);T:setLayout(2)
- assert(v.x==x and v.y==y)
- assert(D[SAVE..'FREE:'..v.slot..':SET']==1)
-end)
-test('dragging free window does not move any other member',function()
- T:toggleLock();assert(D[SAVE..'LOCKED']==0)
- local v=memberView(200);local other=memberView(201)
- local ox,oy=other.x,other.y
- mouse=true;v.window.x=333;v.window.y=sh-222;frame()
- assert(v.x==333 and v.y==-222 and other.x==ox and other.y==oy)
- mouse=false;frame();assert(D[SAVE..'FREE:'..v.slot..':X']==333)
-end)
-test('mouse-up includes the last movement before saving',function()
- local v=memberView(200)
- mouse=true;v.window.x=320;frame()
- mouse=false;v.window.x=333;frame()
- assert(v.x==333 and D[SAVE..'FREE:'..v.slot..':X']==333)
-end)
-test('auto drag moves whole grid and does not overwrite free layout',function()
- T:setLayout(0);local v=memberView(200);local other=memberView(201)
- local ox,oy=other.x,other.y
- mouse=true;v.window.x=v.x+17;v.window.y=v.window.y-19;frame()
- assert(other.x==ox+17 and other.y==oy-19)
- mouse=false;frame();T:setLayout(2)
- assert(v.x==333 and v.y==-222)
-end)
-test('reset moves free windows and leaves scale untouched',function()
- local scale=D['UI:SAVE:PADUI:TEAM_SCALE']
- T:resetPositions();assert(memberView(200).x~=333 or memberView(200).y~=-222)
- assert(D['UI:SAVE:PADUI:TEAM_SCALE']==scale)
-end)
-test('membership reorder does not remap a remaining free window',function()
- local v=memberView(200);local x,y=v.x,v.y
- for _,key in ipairs({'NAME','UID','PRESENT'}) do
-  local a='SERVER:GROUP:0:'..key;local b='SERVER:GROUP:7:'..key
-  D[a],D[b]=D[b],D[a]
- end
- frame();assert(memberView(200)==v and v.x==x and v.y==y and v.member.index==7)
-end)
-test('context-menu snapshot cannot target a replacement member',function()
- local v=memberView(200);T:click(v.slot,'right')
- local index=v.member.index
- D['SERVER:GROUP:'..index..':UID']=9900
- D['SERVER:GROUP:'..index..':NAME']=8800;strings[8800]='Replacement'
- frame();local n=#actions;T:menuAction('select');assert(#actions==n)
-end)
-test('click routes to correct server group index and ignores absent members',function()
- local v=memberView(201);T:click(v.slot,'left')
- assert(actions[#actions][1]=='team_target' and actions[#actions][2]==tostring(v.member.index))
- D['SERVER:GROUP:'..v.member.index..':PRESENT']=0
- local n=#actions;T:click(v.slot,'left');assert(#actions==n)
- D['SERVER:GROUP:'..v.member.index..':PRESENT']=1;frame()
-end)
-test('asynchronously unresolved labels cannot reuse the previous name',function()
- local v=memberView(201);local index=v.member.index
- D['SERVER:GROUP:'..index..':NAME']=9999
- D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100
- T:update();assert(not memberView(201))
- frame();assert(not memberView(201))
- strings[9999]='New Name';frame();assert(memberView(201).member.name=='New Name')
-end)
-test('scaling/font change changes geometry once, all 75..150 percent',function()
- for _,scale in ipairs({75,100,125,150}) do for _,delta in ipairs({-1,0,1}) do
-  D['UI:SAVE:PADUI:TEAM_SCALE']=scale;D['UI:SAVE:PADUI:FONT_DELTA']=delta;frame()
-  assert(T.cellW==2*scale)
-  assert(T.cards[1].nodes.target_button.x>0)
-  assert(T.cards[1].nodes.target_button.x+T.cards[1].nodes.target_button.w==T.cellW)
-  local _,l,w=snapshot(T);frame();assert(T.stats.layouts==l and backend.writes==w)
+test('DE EN FR lock labels and XML action handlers',function()
+ for _,def in ipairs({fixture.roots,fixture.panel})do for _,p in pairs(def)do
+  for _,side in ipairs({'l','r'})do if p['onclick_'..side]=='lua' then assert(execute(p['params_'..side]))end end
  end end
+ for _,lang in ipairs({'de','fr','en'})do PadUI.language=function()return lang end;PadUISettings:refresh();assert(U[PAGE..':modular_team:lock:text'].hardtext:find('LOCK',1,true))end
 end)
-test('viewport shrink clamps once; stable viewport does not repeat layouts',function()
- T:setLayout(1);sw,sh=640,480;frame()
- assert(T.overflow)
- local l=T.stats.layouts;frame();assert(T.stats.layouts==l)
- T:setLayout(2)
- for _,v in ipairs(T.cards) do if v.member then assert(v.x>=0 and v.x+T.cellW<=sw and v.y<=0 and -v.y+T.cellH<=sh) end end
- sw,sh=1920,1080;frame()
+test('delayed invitation names never use the UInt32 getter',function()
+ populate(1);strings[100]=nil;frame();frame();assert(visible()==1)
+ strings[100]='Member0';frame();assert(visible()==2 and stats.unsignedReads==0)
 end)
-test('native resize while mouse held does not persist a spurious drag',function()
- T:setLayout(2);local v=memberView(201)
- local x,y=v.freeX,v.freeY
- local savedY=D[SAVE..'FREE:'..v.slot..':Y']
- mouse=true;sw,sh=960,640;frame()
- assert(v.freeX==x and v.freeY==y and T.dragging==nil)
- assert(D[SAVE..'FREE:'..v.slot..':Y']==savedY)
- mouse=false;sw,sh=1920,1080;frame()
- assert(v.window.y==sh+v.y)
+test('signed high-bit name ID uses only the unbound setter',function()
+ D['SERVER:GROUP:0:NAME']=-2147483647;strings[2147483649]='HighBit';frame();frame()
+ assert(member(200).member.name=='HighBit' and D['SERVER:GROUP:0:NAME']==-2147483647)
 end)
-test('visible cards do not overlap after native positioning in a fitting grid',function()
- D['UI:SAVE:PADUI:TEAM_SCALE']=100
- for mode=0,1 do
-  T:setLayout(mode)
-  for n=1,9 do
-   D[SAVE..(mode==0 and 'COLUMNS' or 'ROWS')]=n;T:requestUpdate();nativeFrame()
-   assert(visible()==#T.ordered)
-   for a=1,9 do for b=a+1,9 do
-    local p,q=raw[CARD..a],raw[CARD..b]
-    if p.active and q.active then
-     assert(p.x_real+p.w_real<=q.x_real or q.x_real+q.w_real<=p.x_real
-      or p.y_real+p.h_real<=q.y_real or q.y_real+q.h_real<=p.y_real)
-    end
-   end end
+test('rapid slot reuse discards previous member identity',function()
+ populate(1);frame();frame();local old=member(200).member
+ D['SERVER:GROUP:0:UID']=777;D['SERVER:GROUP:0:NAME']=777;strings[777]='Replacement'
+ frame();assert(not member(200) and not T:validMember(old));frame();assert(member(777))
+end)
+test('all group sizes and optional self',function()
+ for n=0,8 do populate(n);frame();frame();assert(visible()==n+1)end
+ T:toggleSelf();nativeCoords();assert(visible()==8);populate(0);frame();assert(visible()==0)
+ T:toggleSelf();populate(8);frame();frame();assert(visible()==9)
+end)
+test('steady state: no extra sorts, layouts, UI/DB/text-ID writes',function()
+ frame();local s=state();for i=1,200 do frame()end;unchanged(s)
+end)
+test('same-tick hook does not collect twice',function()local n=T.stats.polls;frame(true);frame(true);assert(T.stats.polls==n)end)
+test('HP changes update bars without a name sort or relayout',function()
+ local v=member(200);local s,l,w=T.stats.sorts,T.stats.layouts,v.nodes.hp_fill.w
+ D['UI:VARIABLES:BARS:TEAM:0:HP']=64;frame();assert(v.nodes.hp_fill.w<w and T.stats.sorts==s and T.stats.layouts==l)
+end)
+test('HP sort keeps member-to-window identity',function()
+ T:setSort('hp');local v=member(200);D['UI:VARIABLES:BARS:TEAM:0:HP']=1;frame()
+ assert(member(200)==v and T.ordered[#T.ordered].uid==200)
+ local l=T.stats.layouts;D['UI:VARIABLES:BARS:TEAM:0:HP']=2;frame();assert(T.stats.layouts==l)
+ T:setSort('name')
+end)
+test('horizontal and vertical tracks produce non-overlapping rectangles',function()
+ for mode=0,1 do T:setLayout(mode)
+  for tracks=1,4 do D[SAVE..(mode==0 and 'COLUMNS' or 'ROWS')]=tracks;T:requestUpdate();nativeCoords()
+   for i,a in ipairs(T.cards)do if a.member then for j=i+1,9 do local b=T.cards[j]
+    if b.member then assert(a.x+T.cellW<=b.x or b.x+T.cellW<=a.x or a.y-T.cellH>=b.y or b.y-T.cellH>=a.y)end
+   end end end
   end
  end
- T:setLayout(2)
 end)
-test('module reload reuses native windows and does not stack settings wrappers',function()
- local oldRefresh=PadUISettings.refresh
- dofile('user/team_compact.lua');T=RyzomTeamUI;frame();frame()
- assert(not T.failed and T.uiReady and backend.parses==1 and backend.panels==1)
- assert(PadUISettings.refresh==oldRefresh)
- assert(visible()==9)
+test('native BL TL positions equal saved top offsets plus screen height',function()
+ for _,v in ipairs(T.cards)do if v.member then assert(v.window.y==sh+v.y and v.window.y_real==sh+v.y-T.cellH)end end
 end)
-test('cold restart declares save leaves before native config restoration',function()
- local saved={}
- T:savePositions()
- for k,v in pairs(D) do if k:match('^UI:SAVE:') then saved[k]=v end end
- local savedX=D[SAVE..'FREE:1:X']
- game.InGameDbInitialized=false;T:update()
- for k in pairs(D) do if k:sub(1,#SAVE)==SAVE then D[k]=nil end end
- dofile('user/team_compact.lua');T=RyzomTeamUI
- assert(D[SAVE..'INIT']==0 and D[SAVE..'FREE:9:Y']~=nil)
- -- Mirror CInterfaceConfig::streamToDataBase: only existing leaves restored.
- for k,v in pairs(saved) do if D[k]~=nil then D[k]=v end end
- game.InGameDbInitialized=true;frame();frame()
- assert(not T.failed and T:isEnabled() and T.cards[1].freeX==savedX)
- assert(T:mode()==2 and visible()==9)
+test('free positions survive switching layouts and changing HP',function()
+ T:setLayout(2);nativeCoords();local v=member(200);local x,y=v.x,v.y
+ D['UI:VARIABLES:BARS:TEAM:0:HP']=127;frame();T:setLayout(0);T:setLayout(2)
+ assert(v.x==x and v.y==y and D[SAVE..'FREE:'..v.slot..':SET']==1)
 end)
-test('character change drops cached identities and restores that character preferences',function()
- game.InGameDbInitialized=false;T:update();assert(visible()==0)
- ownName='SecondCharacter';populate(0)
- for k in pairs(D) do if k:sub(1,#SAVE)==SAVE then D[k]=0 end end
- -- Fresh character's native UI visibility is normally restored before readiness.
- raw[LEGACY].active=true
- game.InGameDbInitialized=true;frame()
- assert(T.character==ownName and visible()==1 and T.rows[1].member==nil)
- assert(T.rows[1].self and T.rows[1].name==ownName)
- assert(D[SAVE..'LOCKED']==1)
+test('name click targets while LOCK is on',function()
+ lock(T);local v=member(200);local x,y=v.x,v.y;local n=#actions
+ press(v);release();assert(#actions==n+1 and actions[#actions][1]=='team_target')
+ assert(v.x==x and v.y==y)
 end)
-test('hot reload from the DB-bound prototype requests restart before writing IDs',function()
- local n=raw[DRIVER..':name_source0'];n.textid_dblink='SERVER:GROUP:0:NAME'
- local before=backend.textidSets
+test('name click targets while LOCK is off',function()
+ unlock(T);local v=member(200);local x,y=v.x,v.y;local n=#actions
+ press(v);release();assert(#actions==n+1 and actions[#actions][2]==tostring(v.member.index))
+ assert(v.x==x and v.y==y)
+end)
+test('small mouse jitter remains a click, without moving a window',function()
+ local v=member(200);local x,y=v.x,v.y;local n=#actions
+ press(v);move(2,1);release();assert(#actions==n+1 and v.x==x and v.y==y)
+end)
+test('free drag moves only that card and does not change target',function()
+ local v,b=member(200),member(201);local x,y,bx,by=v.x,v.y,b.x,b.y;local n=#actions
+ press(v);move(20,-30);assert(v.x==x+20 and v.y==y-30 and b.x==bx and b.y==by)
+ release();assert(#actions==n and D[SAVE..'FREE:'..v.slot..':X']==v.x)
+end)
+test('drag back to the starting point is not a target click',function()
+ local v=member(200);local n=#actions;press(v);move(30,-10);move(0,0);release();assert(#actions==n)
+end)
+test('a long hold without motion still selects on release',function()
+ local v=member(200);local n=#actions;press(v);for i=1,20 do frame()end;release();assert(#actions==n+1)
+end)
+test('resource-bar press cannot start a drag and remains selectable',function()
+ local v=member(200);local x,y=v.x,v.y;local n=#actions
+ press(v,20);move(20,0);release();assert(v.x==x and v.y==y and #actions==n+1)
+end)
+test('LOCK prevents name drag but not name selection',function()
+ lock(T);local v=member(200);local x,y=v.x,v.y;local n=#actions
+ press(v);move(12,0);release();assert(v.x==x and v.y==y and #actions==n+1);unlock(T)
+end)
+test('automatic mode drags all cards together, preserving free layout',function()
+ local v,b=member(200),member(201);local fx,fy=v.x,v.y;T:setLayout(0);nativeCoords()
+ local x,y,bx,by=v.x,v.y,b.x,b.y;local n=#actions
+ press(v);move(20,-10);assert(v.x==x+20 and b.x==bx+20 and b.y==by-10);release();assert(#actions==n)
+ T:setLayout(2);nativeCoords();assert(v.x==fx and v.y==fy)
+end)
+test('last mouse-up position is applied even without a final move frame',function()
+ local v=member(200);local x=v.x;local n=#actions
+ press(v);move(20,0);move(30,0,false);release();assert(v.x==x+30 and #actions==n)
+end)
+test('release-frame before click callback cannot target after dragging',function()
+ local v=member(200);local n=#actions;press(v);move(10,0);release(true,true);assert(#actions==n)
+end)
+test('quick native click between frames is still a target click',function()
+ local v=member(200);local n=#actions;press(v,5,false);release();assert(#actions==n+1)
+end)
+test('quick drag between frames is not mistaken for a target click',function()
+ local v=member(200);local x=v.x;local n=#actions;press(v,5,false);move(12,0,false);release()
+ assert(v.x==x+12 and #actions==n)
+end)
+test('mouse release outside the old button still finishes and saves a drag',function()
+ local v=member(200);local n=#actions;press(v);move(20,-10);move(100,-70,false);release(false)
+ assert(not T.dragging and D[SAVE..'FREE:'..v.slot..':Y']==v.y and #actions==n)
+end)
+test('next quick click is not swallowed after releasing outside a button',function()
+ local v=member(200);press(v);move(20,0);release(false)
+ local other=member(201);local n=#actions;press(other,5,false);release()
+ assert(#actions==n+1 and actions[#actions][2]==tostring(other.member.index))
+end)
+test('holding an automatic grid at a screen edge does not repeat layouts',function()
+ T:setLayout(0);nativeCoords();local v=member(200);press(v);move(10000,-10000)
+ local n=T.stats.layouts;for i=1,20 do frame(true)end;assert(T.stats.layouts==n)
+ release();T:setLayout(2);nativeCoords()
+end)
+test('no accidental drag through an overlapping UI window',function()
+ local v=member(200);local x,y=v.x,v.y;press(v,5,false);over=U[PAGE];frame(true);move(20,0);release(false)
+ assert(v.x==x and v.y==y)
+end)
+test('mouse-down in the world cannot become a name drag when moved over UI',function()
+ local v=member(200);local x,y=v.x,v.y
+ mouse=true;px,py,mx,my=1,1,1,1;over=nil;frame(true)
+ over=v.window;mx,my=v.window.x_real+30,v.window.y-5;frame(true);release(false)
+ assert(v.x==x and v.y==y)
+end)
+test('name right-click keeps the member context menu',function()
+ local v=member(200);caller=v.nodes.target_button;T:click(v.slot,'right');caller=nil
+ assert(actions[#actions][1]=='active_menu' and T.menuMember.uid==200)
+end)
+test('HP sort does not move cards underneath a held name button',function()
+ T:setLayout(0);T:setSort('hp');nativeCoords();local v=member(200);press(v);local x,y=v.x,v.y
+ D['UI:VARIABLES:BARS:TEAM:'..v.member.index..':HP']=1;frame();assert(v.x==x and v.y==y)
+ release();T:setSort('name');T:setLayout(2);nativeCoords()
+end)
+test('replacing a member while held cannot select or move the replacement',function()
+ local v=member(200);local n=#actions;press(v)
+ D['SERVER:GROUP:0:UID']=888;D['SERVER:GROUP:0:NAME']=888;strings[888]='NewMember'
+ frame();frame();move(20,0);release();assert(#actions==n)
+ populate(8);frame();frame()
+end)
+test('context-menu snapshot cannot target a replacement',function()
+ local v=member(200);T:click(v.slot,'right');local n=#actions
+ D['SERVER:GROUP:0:UID']=989;T:menuAction('select');assert(#actions==n)
+ populate(8);frame();frame()
+end)
+test('absent member clicks are rejected',function()
+ local v=member(201);D['SERVER:GROUP:'..v.member.index..':PRESENT']=0;local n=#actions
+ press(v);release();assert(#actions==n);D['SERVER:GROUP:'..v.member.index..':PRESENT']=1;frame()
+end)
+test('server slot reorder preserves free window identity',function()
+ local v=member(200);local x,y=v.x,v.y
+ for _,k in ipairs({'UID','NAME','PRESENT'})do D['SERVER:GROUP:0:'..k],D['SERVER:GROUP:7:'..k]=D['SERVER:GROUP:7:'..k],D['SERVER:GROUP:0:'..k]end
+ frame();frame();assert(member(200)==v and v.x==x and v.y==y)
+ populate(8);frame();frame()
+end)
+test('turning LOCK on during a drag stops movement and swallows release',function()
+ local v=member(200);local n=#actions;press(v);move(10,0);lock(T);local x,y=v.x,v.y
+ move(20,0);release();assert(v.x==x and v.y==y and #actions==n);unlock(T)
+end)
+test('changing layout during a drag never targets a member',function()
+ local v=member(200);local n=#actions;press(v);move(10,0);T:setLayout(1);nativeCoords();release();assert(#actions==n)
+ T:setLayout(2);nativeCoords()
+end)
+test('hiding team cancels a held gesture',function()
+ local v=member(200);local n=#actions;press(v);T:toggle();release(false);assert(#actions==n and visible()==0)
+ T:toggle();nativeCoords()
+end)
+test('all scales and font offsets keep the whole card selectable',function()
+ for _,scale in ipairs({75,100,125,150})do for _,delta in ipairs({-1,0,1})do
+  D['UI:SAVE:PADUI:TEAM_SCALE']=scale;D['UI:SAVE:PADUI:FONT_DELTA']=delta;frame()
+  assert(T.cellW==2*scale)
+  for _,v in ipairs(T.cards)do assert(v.nodes.target_button.x==0 and v.nodes.target_button.w==T.cellW and v.nodes.target_button.h==T.cellH)end
+  local s=state();frame();unchanged(s)
+ end end
+ D['UI:SAVE:PADUI:TEAM_SCALE']=100;D['UI:SAVE:PADUI:FONT_DELTA']=0;frame()
+end)
+test('viewport resize while held cancels drag rather than saving resize as motion',function()
+ local v=member(200);local n=#actions;press(v);sw,sh=1600,900;frame();move(30,0);release(false);assert(#actions==n)
+ sw,sh=1920,1080;frame()
+end)
+test('free drag clamps to screen edges and persists clamped coordinates',function()
+ local v=member(200);press(v);move(10000,-10000);release()
+ assert(v.x==sw-T.cellW and v.y==-(sh-T.cellH))
+ assert(D[SAVE..'FREE:'..v.slot..':X']==v.x and D[SAVE..'FREE:'..v.slot..':Y']==v.y)
+ T:resetPositions();nativeCoords()
+end)
+test('position reset leaves size preference untouched',function()
+ local scale=D['UI:SAVE:PADUI:TEAM_SCALE'];T:resetPositions();nativeCoords();assert(D['UI:SAVE:PADUI:TEAM_SCALE']==scale)
+end)
+test('module reload reuses windows without stacking settings wrappers',function()
+ local refresh=PadUISettings.refresh;dofile('user/team_compact.lua');T=RyzomTeamUI;frame();frame()
+ assert(stats.parses==1 and stats.panels==1 and PadUISettings.refresh==refresh and visible()==9)
+end)
+test('cold restart restores only previously declared per-character leaves',function()
+ T:savePositions();local saved={};for k,v in pairs(D)do if k:match('^UI:SAVE:')then saved[k]=v end end
+ game.InGameDbInitialized=false;T:update();for k in pairs(D)do if k:sub(1,#SAVE)==SAVE then D[k]=nil end end
+ dofile('user/team_compact.lua');T=RyzomTeamUI;assert(D[SAVE..'FREE:9:Y']~=nil)
+ for k,v in pairs(saved)do if D[k]~=nil then D[k]=v end end
+ game.InGameDbInitialized=true;frame();frame();assert(visible()==9 and T:mode()==2)
+end)
+test('changing character drops previous member identities',function()
+ game.InGameDbInitialized=false;T:update();ownName='SecondCharacter';populate(0)
+ for k in pairs(D)do if k:sub(1,#SAVE)==SAVE then D[k]=0 end end
+ R[LEGACY].active=true;game.InGameDbInitialized=true;frame();assert(visible()==1 and T.rows[1].self)
+end)
+test('hot reload from old XML requires restart before name-ID writes',function()
+ local n=U[DRIVER..':name_drag_v1'];U[DRIVER..':name_drag_v1']=nil;local sets=stats.idSets
  dofile('user/team_compact.lua');T=RyzomTeamUI;T:update()
- assert(T.failed and T.failed:find('fully restart Ryzom',1,true))
- assert(backend.textidSets==before and U['ui:interface:team_list'].active)
- n.textid_dblink=''
+ assert(T.failed and T.failed:find('fully restart Ryzom',1,true) and stats.idSets==sets)
+ U[DRIVER..':name_drag_v1']=n
 end)
-test('no reflected UInt32 read was attempted by the runtime',function()
- assert(backend.unsignedReads==0)
+test('DB-bound prototype is rejected before assigning text IDs',function()
+ R[DRIVER..':name_source0'].textid_dblink='SERVER:GROUP:0:NAME';local sets=stats.idSets
+ dofile('user/team_compact.lua');T=RyzomTeamUI;T:update();assert(T.failed and stats.idSets==sets)
+ R[DRIVER..':name_source0'].textid_dblink=''
 end)
-test('missing required native API fails safely and enables native team list',function()
- dofile('user/team_compact.lua');T=RyzomTeamUI
- local keep=addDbProp;addDbProp=nil
- T:update();assert(T.failed and U['ui:interface:team_list'].active and visible()==0)
- addDbProp=keep
+test('no UInt32 getter was used anywhere',function()assert(stats.unsignedReads==0)end)
+test('missing native pointer API fails safely to native team window',function()
+ dofile('user/team_compact.lua');T=RyzomTeamUI;local keep=getCurrentWindowUnder;getCurrentWindowUnder=nil
+ T:update();nativeCoords();assert(T.failed and U['ui:interface:team_list'].active and visible()==0);getCurrentWindowUnder=keep
 end)
-print(string.format('PASS all %d Lua regression cases (%s)',count,_VERSION))
+print(string.format('PASS all %d regression cases (%s)',count,_VERSION))

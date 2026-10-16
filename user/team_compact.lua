@@ -17,9 +17,9 @@ local BASE_FONT = {name=11, status=10, hp_text=10, sap_text=9, sta_text=9}
 local SCORES = {'hp', 'sap', 'sta'}
 local TEXT_IDS = {'name', 'status', 'hp_text', 'sap_text', 'sta_text'}
 local words = {
- de={title='Teamfenster', modes={'Vertikal','Horizontal','Frei'}, columns='Spalten (vertikal)', rows='Zeilen (horizontal)', free='Positionen einzeln gespeichert', locked='Positionen gesperrt', unlocked='Verschieben erlaubt', reset='Positionen zur\195\188cksetzen', note='Zum Verschieben entsperren; am linken Rand ziehen. Frei: keine laufende Umsortierung.', overflow='Raster gr\195\182\195\159er als Bildschirm: Gr\195\182\195\159e oder Zeilen/Spalten anpassen.'},
- en={title='Team windows', modes={'Vertical','Horizontal','Free'}, columns='Columns (vertical)', rows='Rows (horizontal)', free='Individual positions saved', locked='Positions locked', unlocked='Movement unlocked', reset='Reset positions', note='Unlock, then drag the left edge. Free: members keep their positions when HP changes.', overflow='Grid exceeds screen: adjust scale or row/column count.'},
- fr={title='Fen\195\170tres d\226\128\153\195\169quipe', modes={'Vertical','Horizontal','Libre'}, columns='Colonnes (vertical)', rows='Lignes (horizontal)', free='Positions individuelles sauv\195\169es', locked='Positions verrouill\195\169es', unlocked='D\195\169placement permis', reset='Replacer les fen\195\170tres', note='D\195\169verrouiller puis tirer le bord gauche. Libre : les PV ne changent pas les positions.', overflow='Grille trop grande : ajuster la taille ou les lignes/colonnes.'}
+ de={title='Teamfenster', modes={'Vertikal','Horizontal','Frei'}, columns='Spalten (vertikal)', rows='Zeilen (horizontal)', free='Positionen einzeln gespeichert', locked='LOCK: An (gesperrt)', unlocked='LOCK: Aus (ziehen)', reset='Positionen zur\195\188cksetzen', note='Name: Klick = Ziel; Ziehen = Verschieben (LOCK aus).', overflow='Raster gr\195\182\195\159er als Bildschirm: Gr\195\182\195\159e oder Zeilen/Spalten anpassen.'},
+ en={title='Team windows', modes={'Vertical','Horizontal','Free'}, columns='Columns (vertical)', rows='Rows (horizontal)', free='Individual positions saved', locked='LOCK: On', unlocked='LOCK: Off (drag)', reset='Reset positions', note='Name: click to target; drag to move with LOCK off.', overflow='Grid exceeds screen: adjust scale or row/column count.'},
+ fr={title='Fen\195\170tres d\226\128\153\195\169quipe', modes={'Vertical','Horizontal','Libre'}, columns='Colonnes (vertical)', rows='Lignes (horizontal)', free='Positions individuelles sauv\195\169es', locked='LOCK : actif', unlocked='LOCK : inactif', reset='Replacer les fen\195\170tres', note='Nom : clic = cible ; glisser = placer (LOCK inactif).', overflow='Grille trop grande : ajuster la taille ou les lignes/colonnes.'}
 }
 local function db(p) return tonumber(getDbProp(p)) or 0 end
 local function ready() return game and game.InGameDbInitialized and (not isPlayerReady or isPlayerReady()) end
@@ -94,16 +94,16 @@ function T:interfaceXML()
   a[#a+1] = '<view type="text_id" id="name_source'..i..'" textid="0" dynamic_string="false" posref="TL TL" fontsize="10" color="0 0 0 0" shadow="false" global_color="false" />'
  end
  -- Root groups need an explicit tree entry for native draw/checkCoords.
- a[#a+1] = '</group><tree node="padui_team_driver" />'
+ a[#a+1] = '<group id="name_drag_v1" w="0" h="0" /></group><tree node="padui_team_driver" />'
  for i=1,9 do
   local id = 'padui_team_member'..i
-  a[#a+1] = '<group type="container" id="'..id..'" w="200" h="34" x="20" y="100" posref="BL TL" title="" options="no_bordure" active="false" opened="true" openable="false" resizer="false" movable="true" lockable="true" locked="true" savable="false" active_savable="false" popable="false" force_open_out="true" open_button="false" title_bar_open="false" right_button="false" header_active="false" global_color="false" global_color_over="false" min_w="1" min_h="1" max_w="4096" max_h="4096" pop_min_w="1" pop_min_h="1" pop_max_w="4096" pop_max_h="4096" escapable="false">'
+  a[#a+1] = '<group type="container" id="'..id..'" w="200" h="34" x="20" y="100" posref="BL TL" title="" options="no_bordure" active="false" opened="true" openable="false" resizer="false" movable="false" lockable="true" locked="true" savable="false" active_savable="false" popable="false" force_open_out="true" open_button="false" title_bar_open="false" right_button="false" header_active="false" global_color="false" global_color_over="false" min_w="1" min_h="1" max_w="4096" max_h="4096" pop_min_w="1" pop_min_h="1" pop_max_w="4096" pop_max_h="4096" escapable="false">'
   a[#a+1] = '<group id="header_closed" h="0" /><group id="header_opened" w="200" h="34" posref="TL TL">'
   local function bitmap(name, x, y, w, h, color)
    a[#a+1] = '<view type="bitmap" id="'..name..'" posref="TL TL" x="'..x..'" y="'..y..'" w="'..w..'" h="'..h..'" texture="blank.tga" scale="true" color="'..color..'" global_color="false" />'
   end
   bitmap('background',0,0,200,34,'12 18 24 255')
-  bitmap('grip',0,0,4,34,'110 235 225 120')
+  bitmap('grip',0,0,200,13,'110 235 225 24')
   bitmap('selected',4,0,3,34,'255 215 110 255')
   bitmap('self_marker',0,0,3,34,'110 235 225 255')
   bitmap('hp_back',8,-13,188,10,'35 42 48 255')
@@ -121,7 +121,7 @@ function T:interfaceXML()
     a[#a+1] = '<view type="text" id="'..name..'_s'..size..'" posref="'..posref..'"'..(parent ~= '' and (' posparent="'..parent..'"') or '')..' x="'..x..'" y="0" fontsize="'..size..'" hardtext="" color="245 235 210 255" shadow="true" global_color="false" active="false" />'
    end
   end
-  a[#a+1] = '<ctrl type="button" id="target_button" posref="TL TL" x="7" y="0" w="193" h="34" button_type="push_button" scale="true" tx_normal="blank.tga" tx_pushed="blank.tga" tx_over="blank.tga" color="0 0 0 0" col_pushed="0 0 0 0" col_over="255 255 255 16" global_color_normal="false" global_color_pushed="false" global_color_over="false" onclick_l="lua" params_l="RyzomTeamUI:click('..i..', &apos;left&apos;)" onclick_r="lua" params_r="RyzomTeamUI:click('..i..', &apos;right&apos;)" />'
+  a[#a+1] = '<ctrl type="button" id="target_button" posref="TL TL" x="0" y="0" w="200" h="34" button_type="push_button" scale="true" tx_normal="blank.tga" tx_pushed="blank.tga" tx_over="blank.tga" color="0 0 0 0" col_pushed="0 0 0 0" col_over="255 255 255 16" global_color_normal="false" global_color_pushed="false" global_color_over="false" onclick_l="lua" params_l="RyzomTeamUI:click('..i..', &apos;left&apos;)" onclick_r="lua" params_r="RyzomTeamUI:click('..i..', &apos;right&apos;)" />'
   a[#a+1] = '</group><group id="content" w="0" h="0" /></group><tree node="'..id..'" />'
  end
  -- A small child panel in the existing Layout tab. Original scale sliders stay.
@@ -151,6 +151,7 @@ T.stats = {polls=0, sorts=0, layouts=0, writes=0, builds=0}
 T.rows, T.cards, T.members = {}, {}, {}
 T.lastTick, T.character, T.failed, T.initializing = nil, nil, nil, false
 T.uiReady, T.panel, T.busy, T.menuMember = false, nil, false, nil
+T.pointer, T.pointerWasDown = nil, false
 local function put(v, id, key, value)
  local n = v.nodes[id]
  if not n then return end
@@ -161,13 +162,14 @@ local function put(v, id, key, value)
  end
 end
 function T:hideCards()
+ T:cancelPointer()
  for _,v in ipairs(T.cards) do
   if v.window then changed(v.window,'active',false) end
  end
 end
 function T:initUI()
  if T.uiReady then return true end
- if not parseInterfaceFromString or not createGroupInstance or not addDbProp or not getMouseDown or not setOnDraw then
+ if not parseInterfaceFromString or not createGroupInstance or not addDbProp or not getMouseDown or not getMousePos or not getCurrentWindowUnder or not setOnDraw then
   error('Client lacks native XML/template/DB/mouse/draw API')
  end
  local legacy = ui(LEGACY)
@@ -178,6 +180,7 @@ function T:initUI()
  end
  T.driver, T.legacy = ui(DRIVER), legacy
  if not T.driver then error('Team controller not created') end
+ if not ui(DRIVER..':name_drag_v1') then error('Name-drag widgets changed; fully restart Ryzom') end
  T.sources, T.oldSources, T.nameRequests = {}, {}, {}
  for i=0,7 do
   T.sources[i] = ui(DRIVER..':name_source'..i)
@@ -217,6 +220,7 @@ end
 function T:initCharacter(name)
  T:hideCards()
  T.menuMember=nil
+ T.pointer,T.pointerWasDown=nil,getMouseDown() or false
  T.rows, T.members, T.ordered, T.nameRequests = {}, {}, {}, {}
  T.rosterKey, T.sortKey, T.layoutKey, T.geometryKey = nil,nil,nil,nil
  T.dragging, T.lastMode, T.pendingPositionSave = nil,nil,false
@@ -309,7 +313,7 @@ function T:requestUpdate()
 end
 function T:toggle()
  if not ready() or not T.character then return end
- T:savePositions();T.dragging=nil
+ T:cancelPointer();T:savePositions();T.dragging=nil
  store(SAVE..'ENABLED',T:isEnabled() and 0 or 1)
  T.legacy.active=false
  store(ACTIVE_DB,T:isEnabled() and 1 or 0)
@@ -321,22 +325,24 @@ function T:toggleFromLegacy()
 end
 function T:setLayout(mode)
  if not ready() or not T.character or (mode~=0 and mode~=1 and mode~=2) then return end
- T:savePositions();T.dragging=nil
+ T:cancelPointer();T:savePositions();T.dragging=nil
  store(MODE_DB,mode);T:requestUpdate()
 end
 function T:changeTracks(delta)
  local mode=T:mode()
  if not ready() or not T.character or mode==2 or (delta~=-1 and delta~=1) then return end
+ T:cancelPointer()
  store(SAVE..(mode==0 and 'COLUMNS' or 'ROWS'),clamp(T:trackCount(mode)+delta,1,9))
  T:requestUpdate()
 end
 function T:toggleLock()
  if not ready() or not T.character then return end
- T:savePositions();T.dragging=nil
+ T:cancelPointer();T:savePositions();T.dragging=nil
  store(SAVE..'LOCKED',db(SAVE..'LOCKED')==1 and 0 or 1);T:requestUpdate()
 end
 function T:toggleSelf()
  if not ready() then return end
+ T:cancelPointer()
  store('UI:SAVE:PADUI:HIDE_SELF',T:showSelf() and 1 or 0);T:requestUpdate()
 end
 function T:setSort(mode)
@@ -434,17 +440,19 @@ end
 function T:geometry(scale,delta)
  local key=scale..':'..delta
  if T.geometryKey==key then return end
+ T:cancelPointer()
  T.geometryKey=key;T.layoutKey=nil
  T.scale=scale/100
  local function px(x) return round(x*T.scale) end
  T.cellW,T.cellH,T.gap=px(200),px(34),px(2)
+ T.nameH=px(13)
  T.hpW=T.cellW-px(12);T.halfW=math.floor((T.hpW-px(4))/2)
  for _,v in ipairs(T.cards) do
   put(v,'window','w',T.cellW);put(v,'window','h',T.cellH)
   put(v,'header','w',T.cellW);put(v,'header','h',T.cellH)
   put(v,'background','w',T.cellW);put(v,'background','h',T.cellH)
-  for _,id in ipairs({'grip','selected','self_marker'}) do put(v,id,'h',T.cellH) end
-  put(v,'grip','w',px(4));put(v,'self_marker','w',px(3));put(v,'selected','x',px(4));put(v,'selected','w',px(3))
+  for _,id in ipairs({'selected','self_marker'}) do put(v,id,'h',T.cellH) end
+  put(v,'grip','h',T.nameH);put(v,'grip','w',T.cellW);put(v,'self_marker','w',px(3));put(v,'selected','x',px(4));put(v,'selected','w',px(3))
   for _,score in ipairs(SCORES) do
    local width=score=='hp' and T.hpW or T.halfW
    local x=score=='sta' and px(12)+T.halfW or px(8)
@@ -463,7 +471,7 @@ function T:geometry(scale,delta)
   put(v,'name','x',px(8));put(v,'status','x',-px(4))
   v.nodes.name:setLineMaxW(T.cellW-px(80))
   v.nodes.status:setLineMaxW(px(70))
-  put(v,'target_button','x',px(7));put(v,'target_button','w',T.cellW-px(7));put(v,'target_button','h',T.cellH)
+  put(v,'target_button','x',0);put(v,'target_button','w',T.cellW);put(v,'target_button','h',T.cellH)
  end
 end
 function T:savePositions()
@@ -479,6 +487,7 @@ function T:savePositions()
 end
 function T:resetPositions()
  if not ready() or not T.character then return end
+ T:cancelPointer()
  T.anchorX,T.anchorY=20,-100
  for _,v in ipairs(T.cards) do
   v.freeSet=false;v.x=nil;v.y=nil
@@ -486,30 +495,116 @@ function T:resetPositions()
  end
  T.dragging=nil;T.layoutKey=nil;T.lastMode=nil;T:savePositions();T:requestUpdate()
 end
+-- The normal transparent button keeps native mouse capture and click/menu
+-- handling over the WHOLE card. Only a press in the name row may drag. There
+-- is no native mover under it competing for the same mouse events.
+local function inside(n,x,y)
+ return n and n.active and x>=n.x_real and x<n.x_real+n.w_real
+  and y>n.y_real and y<=n.y_real+n.h_real
+end
+local function identity(m)
+ if not m or not ready() then return false end
+ if m.self then return clean(m.name):lower()==clean(getPlayerName()):lower() end
+ local p='SERVER:GROUP:'..m.index..':'
+ return db(p..'UID')==m.uid and db(p..'NAME')==m.nameId
+end
+function T:cancelPointer()
+ if T.pointer then T.pointer.cancelled=true end
+ if T.dragging then T.sortKey=nil end
+ T.dragging=nil
+end
+function T:beginPointer(v,px,py)
+ if not v or not v.member or not v.window.active or v.x==nil then return end
+ local n=v.nodes.target_button
+ if not inside(n,px,py) then return end
+ local m=v.member
+ local _,cols,rows=T:grid(#T.ordered,T:mode()==0 and 0 or 1,T:trackCount(T:mode()))
+ local inName=py>n.y_real+n.h_real-(T.nameH or 13)
+ T.pointer={slot=v.slot,key=v.key,member={name=m.name,self=m.self,index=m.index,uid=m.uid,nameId=m.nameId},
+  pressX=px,pressY=py,x=v.x,y=v.y,anchorX=T.anchorX,anchorY=T.anchorY,
+  mode=T:mode(),geometry=T.geometryKey,roster=T.rosterKey,viewportW=T.viewportW,viewportH=T.viewportH,
+  maxX=math.max(0,T.viewportW-(cols*(T.cellW+T.gap)-T.gap)),
+  maxTop=math.max(0,T.viewportH-(rows*(T.cellH+T.gap)-T.gap)),
+  canMove=inName and db(SAVE..'LOCKED')~=1,locked=db(SAVE..'LOCKED'),moved=false}
+ -- Freeze HP sorting while a button is held, including clicks on the bars.
+ T.dragging=v.slot
+end
+function T:advancePointer(mx,my)
+ local g=T.pointer
+ if not g or g.finished or g.cancelled then return end
+ local v=T.cards[g.slot]
+ if not v or v.key~=g.key or not v.window.active or not identity(g.member)
+  or not T:isEnabled() or T:mode()~=g.mode or T.geometryKey~=g.geometry or T.rosterKey~=g.roster
+  or T.viewportW~=g.viewportW or T.viewportH~=g.viewportH
+  or db(SAVE..'LOCKED')~=g.locked then T:cancelPointer();return end
+ if not g.canMove then return end
+ local dx,dy=mx-g.pressX,my-g.pressY
+ -- Latch movement: dragging away and back must never become a target click.
+ if dx*dx+dy*dy>=16 then g.moved=true end
+ if not g.moved then return end
+ local x,y
+ if g.mode==2 then
+  x=clamp(g.x+dx,0,math.max(0,T.viewportW-T.cellW))
+  y=-clamp(-(g.y+dy),0,math.max(0,T.viewportH-T.cellH))
+  if v.freeSet and v.freeX==x and v.freeY==y then return end
+  v.freeX,v.freeY,v.freeSet=x,y,true
+ else
+  x=clamp(g.anchorX+dx,0,g.maxX)
+  y=-clamp(-(g.anchorY+dy),0,g.maxTop)
+  if T.anchorX==x and T.anchorY==y then return end
+  T.anchorX,T.anchorY=x,y
+ end
+ T.layoutKey=nil;T.pendingPositionSave=true
+end
+function T:finishPointer()
+ local g=T.pointer
+ if not g or g.finished then return end
+ g.finished=true;T.dragging=nil;T.sortKey=nil
+ if g.moved then T.pendingPositionSave=true;T.layoutKey=nil end
+end
 function T:trackMovement(mode)
- local down=getMouseDown and getMouseDown() or false
- if db(SAVE..'LOCKED')==1 then down=false end
- if down or T.dragging then
-  for _,v in ipairs(T.cards) do
-   if v.member and v.window.active and v.nativeX~=nil and (not T.dragging or T.dragging==v.slot) then
-    -- Native root containers use BL TL (positive Y). Saved/layout positions
-    -- remain offsets from the screen top; only movement deltas cross here.
-    local dx,dy=v.window.x-v.nativeX,v.window.y-v.nativeY
-    local x,y=v.x+dx,v.y+dy
-    if dx~=0 or dy~=0 then
-     T.dragging=v.slot
-     if mode==2 then v.freeX=x;v.freeY=y;v.freeSet=true
-     else T.anchorX=T.anchorX+x-v.x;T.anchorY=T.anchorY+y-v.y end
-     T.pendingPositionSave=true;T.layoutKey=nil
-     break
-    end
+ local down,px,py=getMouseDown()
+ local mx,my=getMousePos()
+ if type(mx)~='number' or type(my)~='number' then return end
+ if down and not T.pointerWasDown then
+  T.pointer=nil
+  -- Reject clicks behind another UI window or started in the game world.
+  local over=getCurrentWindowUnder()
+  if over and type(px)=='number' and type(py)=='number' then
+   for _,v in ipairs(T.cards) do
+    if v.window.id==over.id then T:beginPointer(v,px,py);break end
    end
   end
  end
- if not down and T.dragging then
-  -- Include the final native mouse-up position; persist after layout clamping.
-  T.dragging=nil;T.pendingPositionSave=true;T.layoutKey=nil;T.sortKey=nil
+ T.pointerWasDown=down or false
+ T:advancePointer(mx,my)
+ if not down then T:finishPointer() end
+end
+-- Called only by the native button's mouse-up action, NEVER by the frame poll.
+-- The frame loop may finish a drag first; keep its result until this click is
+-- consumed, so release-order differences cannot select somebody after a drag.
+function T:consumePointer(slot)
+ local g=T.pointer
+ local _,px,py=getMouseDown()
+ -- A release outside the button sends no click callback. Do not let that
+ -- completed gesture swallow a later native click before another frame ran.
+ if g and ((g.finished and g.slot~=slot) or
+  (type(px)=='number' and type(py)=='number' and (px~=g.pressX or py~=g.pressY))) then
+  T.pointer=nil;T.dragging=nil;g=nil
  end
+ if g and g.slot~=slot then return nil,true end
+ if not g then
+  -- Fast press/release between two frames still arrives via native capture.
+  if type(px)=='number' and type(py)=='number' then T:beginPointer(T.cards[slot],px,py) end
+  g=T.pointer
+ end
+ if not g then return T.rows[slot],false end
+ local mx,my=getMousePos()
+ if type(mx)=='number' and type(my)=='number' then T:advancePointer(mx,my) end
+ T:finishPointer()
+ if g.moved and T.geometryKey then T:arrange(T:mode(),T.viewportW,T.viewportH) end
+ T.pointer=nil;T.pointerWasDown=false
+ return g.member,g.moved or g.cancelled
 end
 function T:arrange(mode,sw,sh)
  local order={}
@@ -559,7 +654,7 @@ function T:render(ownName)
   if not colors[c] then colors[c]=PadUISettings and PadUISettings:withTransparency(c) or c end
   return colors[c]
  end
- local accent,gripColor=PadUI:accent(),PadUI:accent(160)
+ local accent,gripColor=PadUI:accent(),PadUI:accent(24)
  local tr={}
  for _,key in ipairs({'self','absent','ko','target','leader','sap','stamina'}) do tr[key]=PadUI:tr(key) end
  for _,v in ipairs(T.cards) do
@@ -607,7 +702,7 @@ function T:step(force)
  local viewportChanged=T.viewportW~=sw or T.viewportH~=sh
  if viewportChanged then
   -- Native resize/clamping is not a user drag. Preserve the saved top offsets.
-  T.dragging=nil;T.layoutKey=nil
+  T:cancelPointer();T.layoutKey=nil
  elseif T.lastMode==mode then T:trackMovement(mode) end
  if force or T.lastTick~=tick then
   T.lastTick=tick;T.stats.polls=T.stats.polls+1
@@ -669,10 +764,16 @@ function T:assistMember(m)
  if T:validMember(m) and not m.self then runAH(nil,'assist','entity='..m.name) end
 end
 function T:click(slot,side)
- local m=T.rows[tonumber(slot)]
- if not T:validMember(m) then return end
- if side=='left' then T:selectMember(m)
+ slot=tonumber(slot)
+ if not slot or not ready() or T.failed then return end
+ local m=T.rows[slot]
+ if side=='left' then
+  local cancelled
+  m,cancelled=T:consumePointer(slot)
+  if not cancelled then T:selectMember(m) end
  else
+  T:cancelPointer()
+  if not T:validMember(m) then return end
   -- Snapshot: later roster mutation must never retarget an open context menu.
   T.menuMember={name=m.name,self=m.self,index=m.index,uid=m.uid,nameId=m.nameId}
   runAH(getUICaller(),'active_menu','menu=ui:interface:team_compact_menu')
