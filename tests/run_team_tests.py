@@ -38,7 +38,12 @@ def nodes(group: ET.Element, parent: str) -> dict[str, dict[str, object]]:
         if key in props:
             props[key] = props[key] == "true"
     if group.tag == "view" and props.get("type") == "text_id":
-        props["dbBinding"] = props.pop("textid")
+        text_id = str(props.pop("textid"))
+        if text_id.lstrip("-").isdigit():
+            props["textid"] = int(text_id) & 0xFFFFFFFF
+            props["dbBinding"] = ""
+        else:
+            props["dbBinding"] = text_id
     result[path] = props
     for child in group:
         if child.tag in ("group", "view", "ctrl"):
@@ -77,6 +82,9 @@ def main() -> None:
         assert driver.attrib["use_cursor"] == "false"
         assert driver.attrib["w"] == driver.attrib["h"] == "1"
         assert len(driver.findall("view")) == 8
+        for source in driver.findall("view"):
+            assert source.attrib["textid"] == "0", "Private name resolvers must not bind to SERVER"
+            assert source.attrib["dynamic_string"] == "false"
         assert {g.attrib["id"] for g in members} == {f"padui_team_member{i}" for i in range(1, 10)}
         # Generic root groups also require registration to run native draw/checkCoords.
         assert {t.attrib["node"] for t in root.findall("tree")} == {g.attrib["id"] for g in groups}
