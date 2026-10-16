@@ -8,7 +8,7 @@ A compact interface modification for **Ryzom**, with German, English and French 
 
 ## Funktionen / Features / Fonctionnalités
 
-- Compact player, target and team windows; team sorting by name, HP or missing HP, optional self display, horizontal layout and scaling.
+- Compact player and target windows; up to nine independent team windows with Vertical (1–9 columns), Horizontal (1–9 rows) and Free placement. Team sorting by name, HP or missing HP, optional self display, scaling, move grips and LOCK.
 - Quick item bar with saved assignments and horizontal/vertical layouts.
 - Selected skill level and progress; compact inventory information.
 - Three named countdown timers or stopwatches, with compact controls and scaling.
@@ -16,6 +16,8 @@ A compact interface modification for **Ryzom**, with German, English and French 
 - Nearby creature list, boss notifications and independent named-creature and boss tracking learned from selected targets.
 - Central settings for language, accents, transparency and layouts.
 - Updated chat, map and action bar appearance; item comparison where client data is available.
+
+Team controls: select the layout under **PadUI Settings → Layout**. Turn **LOCK off** and drag the small four-arrow grip at the top right of a member window. Vertical/Horizontal move the whole arrangement; Free moves only that window. Names and resource bars remain click-to-target areas. See [Team windows (Deutsch)](docs/TEAM_MODULAR.md) and [Native move grips (English)](docs/TEAM_DRAG_GRIP.md).
 
 ## Installation
 

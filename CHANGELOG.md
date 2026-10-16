@@ -2,6 +2,16 @@
 
 This repository begins with the existing development version 0.8.10. Earlier changes are summarized from the package history, not reconstructed as Git commits.
 
+## Unreleased
+
+- Replace the shared team panel with up to nine independent member windows; remove the on-window sorting footer. Sorting remains in Settings.
+- Add Vertical layouts with 1–9 columns, Horizontal layouts with 1–9 rows, and Free placement. Retain team scaling, optional self display, status indicators, targeting and context menus.
+- Add small four-arrow corner grips and LOCK. Dragging any member in Vertical/Horizontal moves the complete arrangement; Free moves only the grabbed member. Names and resource bars remain target-selection areas.
+- Save the automatic anchor and free positions separately per character. Keep member-to-window assignments stable while members remain in the team; preserve free positions across layout switches.
+- Reuse windows and one shared controller. Skip unchanged UI values, redundant sorting and layout work; reconcile native position changes with the automatic grid.
+- Correct native text-ID access, explicit opening of dynamically created containers, and bottom-left versus top-offset coordinates encountered during Windows testing. No additional runtime file or symlink is required.
+- Record the maintainer's successful Windows feedback on movement, layout switching, LOCK and position persistence after restart. The runtime at efbd326 has a recorded 74-case Lua 5.3 regression run; these stand-in tests are separate from the manual client checks. Other platforms and untested native edge cases are not certified.
+
 ## 0.8.10
 
 - Restore native global mouseover fading once after 0.8.9; leave subsequent global preferences alone.
