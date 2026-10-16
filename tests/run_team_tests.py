@@ -74,7 +74,7 @@ def main() -> None:
         driver, *members = groups
         assert driver.attrib["use_cursor"] == "false"
         assert driver.attrib["w"] == driver.attrib["h"] == "1"
-        assert driver.find("group[@id='corner_drag_v2']") is not None
+        assert driver.find("group[@id='corner_drag_v3']") is not None
         assert len(driver.findall("view")) == 8
         for source in driver.findall("view"):
             assert source.attrib["textid"] == "0", "Never bind private name resolvers to SERVER"
@@ -101,7 +101,7 @@ def main() -> None:
                 assert button.attrib["onclick_l"] == button.attrib["onclick_r"] == "lua"
             for score in ("hp", "sap", "sta"):
                 assert header.find(f"view[@id='{score}_fill']") is not None
-            for part in ("grip", "grip_h", "grip_v"):
+            for part in ("grip", "grip_h", "grip_v", "grip_n1", "grip_n2", "grip_s1", "grip_s2", "grip_w1", "grip_w2", "grip_e1", "grip_e2"):
                 assert header.find(f"view[@id='{part}']") is not None
             assert header.find("ctrl[@id='grip']") is None, "Do not cover the native mover with a button"
         root_nodes = {}

@@ -12,10 +12,10 @@ local stats={writes=0,dbWrites=0,parses=0,panels=0,unsignedReads=0,idSets=0}
 local execute=loadstring or load
 local exported={id=true,active=true,opened=true,locked=true,movable=true,x=true,y=true,w=true,h=true,x_real=true,y_real=true,w_real=true,h_real=true,
  hardtext=true,textid=true,textid_dblink=true,color=true,tooltip=true,on_active=true,on_active_params=true,on_deactive=true,on_deactive_params=true}
-local function nativeCoords()
+local function nativeCoords(only)
  for i=1,9 do
   local id=CARD..i;local p=R[id]
-  if p and p.setup then
+  if p and p.setup and (not only or only==id) then
    local h=R[id..':header_opened']
    p.w_real=p.w;p.h=h.h;p.h_real=h.h
    p.x_real=p.x;p.y_real=p.y-p.h_real
@@ -50,7 +50,7 @@ add=function(id,attrs)
   invalidateCoords=function()end,
   updateCoords=function()
    if p.type=='container' and p.movable and not U[id..':mover'] then add(id..':mover',{type='mover',y=-4,h=22}) end
-   p.setup=true;nativeCoords()
+   p.setup=true;nativeCoords(id)
   end
  }
  local obj=setmetatable({}, {
@@ -443,7 +443,7 @@ test('every unlocked card pixel is a target area or the native grip at every sca
  for _,scale in ipairs({75,100,125,150}) do
   D['UI:SAVE:PADUI:TEAM_SCALE']=scale;frame();unlock(T)
   local v=member(200);local g=R[v.nodes.grip.id]
-  assert(g.w_real>=16 and g.h_real>=16)
+  assert(g.w_real==math.max(8,math.floor(8*scale/100+0.5)) and g.h_real==g.w_real)
   for x=0,T.cellW-1 do for y=0,T.cellH-1 do
    local sx,sy=v.window.x+x+0.5,v.window.y-y-0.5
    local control=pick(v,sx,sy)
@@ -492,6 +492,151 @@ test('all four target rectangles select the same member',function()
  end
 end)
 
+-- The previous stand-in always delivered both callbacks and refreshed every
+-- window at once. Exercise native positions with those assumptions removed.
+local function positions()
+ local out={}
+ for i,v in ipairs(T.cards) do
+  if v.member then out[i]={x=v.window.x,y=v.window.y,rx=v.window.x_real,ry=v.window.y_real,
+   fx=v.freeX,fy=v.freeY,fs=v.freeSet} end
+ end
+ return out
+end
+local function shifted(before,dx,dy,real)
+ for i,p in pairs(before) do
+  local v=T.cards[i]
+  assert(v.window.x==p.x+dx and v.window.y==p.y+dy,'Independent native position: '..i)
+  assert(v.nativeX==v.window.x and v.nativeY==v.window.y,'Stale layout position: '..i)
+  if real then
+   assert(v.window.x_real==p.rx+dx and v.window.y_real==p.ry+dy,'Stale visible position: '..i)
+  end
+  assert(v.freeX==p.fx and v.freeY==p.fy and v.freeSet==p.fs,'Automatic move overwrote free layout')
+ end
+end
+local function setupGrid(mode)
+ release(false);populate(8);frame();frame();unlock(T)
+ D[SAVE..'COLUMNS']=3;D[SAVE..'ROWS']=3
+ T:setSort('name');T:setLayout(mode);T:resetPositions();frame()
+end
+test('every member including self moves the whole grid in both modes',function()
+ for mode=0,1 do
+  setupGrid(mode)
+  for _,v in ipairs(T.cards) do
+   local before=positions();local n=#actions
+   pressGrip(v,false);move(3,-2,false);shifted(before,3,-2,true)
+   release();shifted(before,3,-2,true);assert(#actions==n)
+  end
+ end
+end)
+test('all siblings update their real rectangles within the native callback',function()
+ setupGrid(1);local v=T.cards[9];local before=positions()
+ pressGrip(v,false)
+ -- Only the captured native window is updated by NeL before calling Lua.
+ R[v.window.id].x=before[9].x+7;R[v.window.id].y=before[9].y-5
+ nativeCoords(v.window.id)
+ T:nativeMove(v.slot)
+ shifted(before,7,-5,true);release()
+end)
+test('a missing move callback cannot detach one member from either grid',function()
+ for mode=0,1 do
+  setupGrid(mode)
+  for _,v in ipairs(T.cards) do
+   local before=positions();pressGrip(v,false)
+   R[v.window.id].x=before[v.slot].x+3;R[v.window.id].y=before[v.slot].y-2
+   frame(true);shifted(before,3,-2,true);release()
+  end
+ end
+end)
+test('missing begin and move callbacks recover the shared anchor once',function()
+ for mode=0,1 do
+  setupGrid(mode);local v=T.cards[8];local before=positions()
+  mouse=true;T.nativeDrag=nil;T.pointer=nil;T.nativeBlocked=false
+  R[v.window.id].x=before[8].x+11;R[v.window.id].y=before[8].y-9
+  frame(true);shifted(before,11,-9,true)
+  local n=T.stats.layouts;frame(true);assert(T.stats.layouts==n)
+  T:nativeMove(8);shifted(before,11,-9,true)
+  release();assert(D[SAVE..'ANCHOR_X']==T.anchorX)
+ end
+end)
+test('move callback without a begin callback recovers before the next frame',function()
+ setupGrid(0);local v=T.cards[7];local before=positions()
+ mouse=true;T.nativeDrag=nil;T.pointer=nil;T.nativeBlocked=false
+ R[v.window.id].x=before[7].x+6;R[v.window.id].y=before[7].y-4
+ nativeCoords(v.window.id);T:nativeMove(7)
+ shifted(before,6,-4,true);release()
+end)
+test('lost drag snapshot midway cannot split or double-translate a grid',function()
+ setupGrid(1);local v=T.cards[5];local before=positions()
+ pressGrip(v,false);move(4,-3,false);T.nativeDrag=nil;T.dragging=nil
+ move(12,-8,false);shifted(before,12,-8,true)
+ frame(true);shifted(before,12,-8,true);release()
+end)
+test('last native movement on mouse-up is synchronized before saving',function()
+ setupGrid(0);local v=T.cards[6];local before=positions()
+ pressGrip(v,false);move(3,-2,false)
+ R[v.window.id].x=before[6].x+9;R[v.window.id].y=before[6].y-7
+ mouse=false;frame(true);shifted(before,9,-7,true)
+ assert(D[SAVE..'ANCHOR_X']==T.anchorX and not T.nativeDrag)
+ release(false)
+end)
+test('cancelled layout gesture cannot drag one card in the new layout',function()
+ setupGrid(0);local v=T.cards[3]
+ pressGrip(v);move(3,0);T:setLayout(1);nativeCoords();local before=positions()
+ move(30,0,false);shifted(before,0,0,true)
+ release();shifted(before,0,0,true)
+end)
+test('locked grid rejects a native displacement instead of detaching',function()
+ setupGrid(1);lock(T);local before=positions();local v=T.cards[4]
+ R[v.window.id].x=v.window.x+17;R[v.window.id].y=v.window.y-13
+ frame(true);shifted(before,0,0,true);unlock(T)
+end)
+test('group clamping keeps every relative offset at screen boundaries',function()
+ for mode=0,1 do
+  setupGrid(mode);local before=positions();local v=T.cards[9]
+  pressGrip(v);move(10000,-10000)
+  local dx=v.window.x-before[9].x;local dy=v.window.y-before[9].y
+  shifted(before,dx,dy,true)
+  for _,w in ipairs(T.cards) do
+   assert(w.window.x>=0 and w.window.x+T.cellW<=sw and w.window.y>=T.cellH and w.window.y<=sh)
+  end
+  release()
+ end
+end)
+test('free mode with a missing callback moves only the captured window',function()
+ setupGrid(0);T:setLayout(2);nativeCoords()
+ local before=positions();local v=T.cards[6];pressGrip(v,false)
+ R[v.window.id].x=v.window.x+5;R[v.window.id].y=v.window.y-4
+ frame(true);release()
+ for i,p in pairs(before) do
+  assert(T.cards[i].window.x==p.x+(i==6 and 5 or 0))
+  assert(T.cards[i].window.y==p.y-(i==6 and 4 or 0))
+ end
+ assert(D[SAVE..'FREE:6:X']==v.freeX)
+end)
+test('move glyph has four arrowheads inside the half-size grip',function()
+ for _,scale in ipairs({75,100,125,150}) do
+  D['UI:SAVE:PADUI:TEAM_SCALE']=scale;frame();unlock(T)
+  for _,v in ipairs(T.cards) do
+   local g=v.nodes.grip
+   assert(g.w==math.max(8,math.floor(8*scale/100+0.5)) and g.h==g.w)
+   for _,part in ipairs({'n1','n2','s1','s2','w1','w2','e1','e2'}) do
+    local a=v.nodes['grip_'..part]
+    assert(a.active and a.x>=g.x and a.x+a.w<=g.x+g.w)
+    assert(a.y<=g.y and a.y-a.h>=g.y-g.h)
+   end
+  end
+  lock(T)
+  for _,v in ipairs(T.cards) do assert(not v.nodes.grip_n1.active) end
+ end
+ D['UI:SAVE:PADUI:TEAM_SCALE']=100;frame();unlock(T)
+end)
+test('recovered group movement has no repeated idle work',function()
+ setupGrid(0);local v=T.cards[8]
+ mouse=true;R[v.window.id].x=v.window.x+3;frame(true);release()
+ frame();local s=state();for i=1,200 do frame() end;unchanged(s)
+ T:setLayout(2);nativeCoords()
+end)
+
 test('module reload reuses windows without stacking settings wrappers',function()
  local refresh=PadUISettings.refresh;dofile('user/team_compact.lua');T=RyzomTeamUI;frame();frame()
  assert(stats.parses==1 and stats.panels==1 and PadUISettings.refresh==refresh and visible()==9)
@@ -509,10 +654,10 @@ test('changing character drops previous member identities',function()
  R[LEGACY].active=true;game.InGameDbInitialized=true;frame();assert(visible()==1 and T.rows[1].self)
 end)
 test('hot reload from old XML requires restart before name-ID writes',function()
- local n=U[DRIVER..':corner_drag_v2'];U[DRIVER..':corner_drag_v2']=nil;local sets=stats.idSets
+ local n=U[DRIVER..':corner_drag_v3'];U[DRIVER..':corner_drag_v3']=nil;local sets=stats.idSets
  dofile('user/team_compact.lua');T=RyzomTeamUI;T:update()
  assert(T.failed and T.failed:find('fully restart Ryzom',1,true) and stats.idSets==sets)
- U[DRIVER..':corner_drag_v2']=n
+ U[DRIVER..':corner_drag_v3']=n
 end)
 test('DB-bound prototype is rejected before assigning text IDs',function()
  R[DRIVER..':name_source0'].textid_dblink='SERVER:GROUP:0:NAME';local sets=stats.idSets
