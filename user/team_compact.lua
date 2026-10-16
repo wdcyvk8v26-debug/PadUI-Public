@@ -97,7 +97,7 @@ function T:interfaceXML()
  a[#a+1] = '</group><tree node="padui_team_driver" />'
  for i=1,9 do
   local id = 'padui_team_member'..i
-  a[#a+1] = '<group type="container" id="'..id..'" w="200" h="34" x="20" y="-100" posref="TL TL" title="" options="no_bordure" active="false" opened="true" openable="false" resizer="false" movable="true" lockable="true" locked="true" savable="false" active_savable="false" popable="false" force_open_out="true" open_button="false" title_bar_open="false" right_button="false" header_active="false" global_color="false" global_color_over="false" min_w="1" min_h="1" max_w="4096" max_h="4096" pop_min_w="1" pop_min_h="1" pop_max_w="4096" pop_max_h="4096" escapable="false">'
+  a[#a+1] = '<group type="container" id="'..id..'" w="200" h="34" x="20" y="100" posref="BL TL" title="" options="no_bordure" active="false" opened="true" openable="false" resizer="false" movable="true" lockable="true" locked="true" savable="false" active_savable="false" popable="false" force_open_out="true" open_button="false" title_bar_open="false" right_button="false" header_active="false" global_color="false" global_color_over="false" min_w="1" min_h="1" max_w="4096" max_h="4096" pop_min_w="1" pop_min_h="1" pop_max_w="4096" pop_max_h="4096" escapable="false">'
   a[#a+1] = '<group id="header_closed" h="0" /><group id="header_opened" w="200" h="34" posref="TL TL">'
   local function bitmap(name, x, y, w, h, color)
    a[#a+1] = '<view type="bitmap" id="'..name..'" posref="TL TL" x="'..x..'" y="'..y..'" w="'..w..'" h="'..h..'" texture="blank.tga" scale="true" color="'..color..'" global_color="false" />'
@@ -200,6 +200,11 @@ function T:initUI()
   for _,id in ipairs(TEXT_IDS) do
    for size=7,18 do v.nodes[id..'_s'..size] = ui(CARD..i..':header_opened:'..id..'_s'..size) end
   end
+  -- Dynamic parse only sets OpenAtStart; the normal startup launch has already
+  -- run. Native setup must exist before explicitly opening header/content.
+  w:updateCoords()
+  changed(w,'opened',true)
+  w:updateCoords()
   -- Only these new containers: no native frame/fading, custom bars stay visible.
   runAH(nil,'set_alpha','target='..CARD..i..'|alpha=0')
   T.cards[i] = v
@@ -215,7 +220,8 @@ function T:initCharacter(name)
  T.rows, T.members, T.ordered, T.nameRequests = {}, {}, {}, {}
  T.rosterKey, T.sortKey, T.layoutKey, T.geometryKey = nil,nil,nil,nil
  T.dragging, T.lastMode, T.pendingPositionSave = nil,nil,false
- for _,v in ipairs(T.cards) do v.key=nil;v.member=nil;v.cache={};v.x=nil;v.y=nil end
+ T.viewportW,T.viewportH=nil,nil
+ for _,v in ipairs(T.cards) do v.key=nil;v.member=nil;v.cache={};v.x=nil;v.y=nil;v.nativeX=nil;v.nativeY=nil end
  declareSaved(false)
  if db(SAVE..'INIT') ~= 1 then
   local sw,sh=getWindowSize();sw=tonumber(sw) or 1280;sh=tonumber(sh) or 720
@@ -485,9 +491,12 @@ function T:trackMovement(mode)
  if db(SAVE..'LOCKED')==1 then down=false end
  if down or T.dragging then
   for _,v in ipairs(T.cards) do
-   if v.member and v.window.active and v.x~=nil and (not T.dragging or T.dragging==v.slot) then
-    local x,y=v.window.x,v.window.y
-    if x~=v.x or y~=v.y then
+   if v.member and v.window.active and v.nativeX~=nil and (not T.dragging or T.dragging==v.slot) then
+    -- Native root containers use BL TL (positive Y). Saved/layout positions
+    -- remain offsets from the screen top; only movement deltas cross here.
+    local dx,dy=v.window.x-v.nativeX,v.window.y-v.nativeY
+    local x,y=v.x+dx,v.y+dy
+    if dx~=0 or dy~=0 then
      T.dragging=v.slot
      if mode==2 then v.freeX=x;v.freeY=y;v.freeSet=true
      else T.anchorX=T.anchorX+x-v.x;T.anchorY=T.anchorY+y-v.y end
@@ -529,11 +538,15 @@ function T:arrange(mode,sw,sh)
    x=clamp(v.freeX,0,math.max(0,sw-T.cellW))
    y=-clamp(-v.freeY,0,math.max(0,sh-T.cellH))
   else x=T.anchorX+positions[rank].x*stepX;y=T.anchorY-positions[rank].y*stepY end
-  changed(v.window,'x',round(x));changed(v.window,'y',round(y))
-  v.x,v.y=v.window.x,v.window.y
+  -- CGroupContainer::setup forces BL TL for root windows, regardless of the
+  -- XML hotspot. Convert top offsets to native coordinates before placement.
+  changed(v.window,'x',round(x));changed(v.window,'y',round(sh+y))
+  v.x,v.y=round(x),round(y)
+  v.nativeX,v.nativeY=v.window.x,v.window.y
  end
  T.layoutKey=prefix..T.anchorX..':'..T.anchorY..suffix
  T.lastMode=mode
+ T.viewportW,T.viewportH=sw,sh
  if T.pendingPositionSave and not T.dragging then T:savePositions() end
 end
 function T:render(ownName)
@@ -589,9 +602,13 @@ function T:step(force)
  T:installSettings()
  if not T:isEnabled() then T:hideCards();return end
  local mode=T:mode()
- if T.lastMode==mode then T:trackMovement(mode) end
  local tick=db('UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK')
  local sw,sh=getWindowSize();sw=tonumber(sw) or 1280;sh=tonumber(sh) or 720
+ local viewportChanged=T.viewportW~=sw or T.viewportH~=sh
+ if viewportChanged then
+  -- Native resize/clamping is not a user drag. Preserve the saved top offsets.
+  T.dragging=nil;T.layoutKey=nil
+ elseif T.lastMode==mode then T:trackMovement(mode) end
  if force or T.lastTick~=tick then
   T.lastTick=tick;T.stats.polls=T.stats.polls+1
   local members,rosterKey,sortKey=T:collect(ownName)
