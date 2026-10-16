@@ -10,13 +10,20 @@ local PAGE='ui:interface:padui_settings:content:page3'
 local CARD='ui:interface:padui_team_member'
 local copy
 copy=function(t) local c={};for k,v in pairs(t) do c[k]=type(v)=='table' and copy(v) or v end;return c end
-local exported={id=true,active=true,x=true,y=true,w=true,h=true,x_real=true,y_real=true,w_real=true,h_real=true,locked=true,hardtext=true,textid=true,textid_dblink=true,color=true,tooltip=true,on_active=true,on_active_params=true,on_deactive=true,on_deactive_params=true}
+local exported={id=true,active=true,opened=true,x=true,y=true,w=true,h=true,x_real=true,y_real=true,w_real=true,h_real=true,locked=true,hardtext=true,textid=true,textid_dblink=true,color=true,tooltip=true,on_active=true,on_active_params=true,on_deactive=true,on_deactive_params=true}
+local raw={}
+local nativeLayout
 local execute=loadstring or load
 local function node(id,attrs)
  local p=copy(attrs or {})
  p.id=id
  p.textid_dblink=p.dbBinding or ''
  p.initialized=false
+ if p.type=='container' then
+  -- parse(opened) stores OpenAtStart; dynamic parsing does not call launch.
+  p.openAtStart=p.opened=='true' or p.opened==true
+  p.opened=false;p.nativeSetup=false
+ end
  for _,k in ipairs({'x','y','w','h','x_real','y_real','w_real','h_real','textid'}) do p[k]=p[k] or 0 end
  if p.active==nil then p.active=true end
  if p.locked==nil then p.locked=false end
@@ -25,6 +32,7 @@ local function node(id,attrs)
   find=function(self,child) return U[id..':'..child] end,
   addGroup=function(self,child) assert(U[child.id]);p.added=child.id end,
   invalidateCoords=function() p.invalid=(p.invalid or 0)+1 end,
+  updateCoords=function() nativeLayout(id) end,
   setLineMaxW=function(self,w) assert(type(w)=='number');p.lineMaxW=w;backend.writes=backend.writes+1 end
  }
  local obj=setmetatable({}, {
@@ -47,6 +55,11 @@ local function node(id,attrs)
     backend.textidSets=backend.textidSets+1
    end
    local old=p[key];p[key]=value;backend.writes=backend.writes+1
+   if key=='opened' and p.nativeSetup then
+    raw[id..':header_opened'].active=value
+    raw[id..':header_closed'].active=not value
+    raw[id..':content'].active=value
+   end
    if key=='active' and old~=value then
     local handler=value and p.on_active or p.on_deactive
     local params=value and p.on_active_params or p.on_deactive_params
@@ -57,8 +70,30 @@ local function node(id,attrs)
  U[id]=obj
  return obj,p
 end
-local raw={}
 local function add(id,props) local n,p=node(id,props);raw[id]=p;return n end
+-- A focused model of a8fb199cf6 CGroupContainer::setup/open/updateCoords.
+-- It models open-vs-active, native root hotspots and clipping, NOT rendering.
+nativeLayout=function(id)
+ local p=raw[id]
+ if not p or p.type~='container' then return end
+ local header=raw[id..':header_opened']
+ local closed=raw[id..':header_closed']
+ if not p.nativeSetup then
+  p.nativeSetup=true;p.posref='BL TL'
+  header.active=p.opened;closed.active=not p.opened
+  raw[id..':content'].active=p.opened
+ end
+ -- These test cards use borderless layer metrics and a zero-height content.
+ p.h=p.opened and header.h or closed.h
+ if p.w<=sw and p.h<=sh then
+  p.x=math.max(0,math.min(sw-p.w,p.x))
+  p.y=math.max(p.h,math.min(sh,p.y))
+ end
+ p.x_real=p.x;p.y_real=p.y-p.h;p.w_real=p.w;p.h_real=p.h
+end
+local function nativeFrame()
+ for i=1,9 do if raw[CARD..i] then nativeLayout(CARD..i) end end
+end
 local function materialize(def)
  for id,props in pairs(def) do assert(not U[id], 'duplicate native id '..id);add(id,props) end
 end
@@ -135,7 +170,7 @@ local function syncNames()
 end
 local function frame()
  D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100
- syncNames();RyzomTeamUI:update()
+ nativeFrame();syncNames();RyzomTeamUI:update();nativeFrame()
  assert(not RyzomTeamUI.failed,RyzomTeamUI.failed)
 end
 local function populate(n)
@@ -155,7 +190,14 @@ local function test(name,fn)
  count=count+1;print('PASS '..name)
 end
 local function visible()
- local n=0;for i=1,9 do if U[CARD..i] and U[CARD..i].active then n=n+1 end end;return n
+ nativeFrame()
+ local n=0
+ for i=1,9 do
+  local p=raw[CARD..i];local header=raw[CARD..i..':header_opened']
+  if p and p.active and p.opened and header.active and p.h>0
+   and p.x_real<sw and p.x_real+p.w_real>0 and p.y_real<sh and p.y_real+p.h_real>0 then n=n+1 end
+ end
+ return n
 end
 local function memberView(uid) for _,v in ipairs(RyzomTeamUI.cards) do if v.member and v.member.uid==uid then return v end end end
 local function snapshot(t) return t.stats.sorts,t.stats.layouts,backend.writes,backend.dbWrites end
@@ -191,6 +233,19 @@ test('nine native windows allocated once, single frame controller',function()
  assert(visible()==1 and not U[LEGACY].active)
  assert(hooks[DRIVER]=='RyzomTeamUI:update()' and hooks[LEGACY]=='')
  local n=0;for _,s in pairs(hooks) do if s~='' then n=n+1 end end;assert(n==1)
+end)
+test('dynamic containers are explicitly opened, not just marked active',function()
+ for i=1,9 do
+  local p=raw[CARD..i]
+  assert(p.openAtStart and p.opened==true and p.nativeSetup)
+  assert(raw[CARD..i..':header_opened'].active)
+ end
+end)
+test('native BL TL position equals screen height plus saved top offset',function()
+ local v=T.cards[T.ordered[1].viewSlot];local p=raw[v.window.id]
+ assert(p.posref=='BL TL' and p.y==sh+v.y)
+ assert(p.y_real==sh+v.y-T.cellH and p.h_real==T.cellH)
+ assert(v.y==T.anchorY and p.y>p.h_real)
 end)
 test('old visibility and settings checkbox are kept coherent',function()
  PadUISettings:refresh()
@@ -312,7 +367,7 @@ test('dragging free window does not move any other member',function()
  T:toggleLock();assert(D[SAVE..'LOCKED']==0)
  local v=memberView(200);local other=memberView(201)
  local ox,oy=other.x,other.y
- mouse=true;v.window.x=333;v.window.y=-222;frame()
+ mouse=true;v.window.x=333;v.window.y=sh-222;frame()
  assert(v.x==333 and v.y==-222 and other.x==ox and other.y==oy)
  mouse=false;frame();assert(D[SAVE..'FREE:'..v.slot..':X']==333)
 end)
@@ -325,7 +380,7 @@ end)
 test('auto drag moves whole grid and does not overwrite free layout',function()
  T:setLayout(0);local v=memberView(200);local other=memberView(201)
  local ox,oy=other.x,other.y
- mouse=true;v.window.x=v.x+17;v.window.y=v.y-19;frame()
+ mouse=true;v.window.x=v.x+17;v.window.y=v.window.y-19;frame()
  assert(other.x==ox+17 and other.y==oy-19)
  mouse=false;frame();T:setLayout(2)
  assert(v.x==333 and v.y==-222)
@@ -381,6 +436,34 @@ test('viewport shrink clamps once; stable viewport does not repeat layouts',func
  T:setLayout(2)
  for _,v in ipairs(T.cards) do if v.member then assert(v.x>=0 and v.x+T.cellW<=sw and v.y<=0 and -v.y+T.cellH<=sh) end end
  sw,sh=1920,1080;frame()
+end)
+test('native resize while mouse held does not persist a spurious drag',function()
+ T:setLayout(2);local v=memberView(201)
+ local x,y=v.freeX,v.freeY
+ local savedY=D[SAVE..'FREE:'..v.slot..':Y']
+ mouse=true;sw,sh=960,640;frame()
+ assert(v.freeX==x and v.freeY==y and T.dragging==nil)
+ assert(D[SAVE..'FREE:'..v.slot..':Y']==savedY)
+ mouse=false;sw,sh=1920,1080;frame()
+ assert(v.window.y==sh+v.y)
+end)
+test('visible cards do not overlap after native positioning in a fitting grid',function()
+ D['UI:SAVE:PADUI:TEAM_SCALE']=100
+ for mode=0,1 do
+  T:setLayout(mode)
+  for n=1,9 do
+   D[SAVE..(mode==0 and 'COLUMNS' or 'ROWS')]=n;T:requestUpdate();nativeFrame()
+   assert(visible()==#T.ordered)
+   for a=1,9 do for b=a+1,9 do
+    local p,q=raw[CARD..a],raw[CARD..b]
+    if p.active and q.active then
+     assert(p.x_real+p.w_real<=q.x_real or q.x_real+q.w_real<=p.x_real
+      or p.y_real+p.h_real<=q.y_real or q.y_real+q.h_real<=p.y_real)
+    end
+   end end
+  end
+ end
+ T:setLayout(2)
 end)
 test('module reload reuses native windows and does not stack settings wrappers',function()
  local oldRefresh=PadUISettings.refresh
