@@ -425,7 +425,7 @@ do
   end
   local announceId='padui_role_announce'
   local announce=sub:getLineFromId(announceId)
-  local mayAnnounce=self.inTeam and db('SERVER:USER:TEAM_LEADER')==1
+  local mayAnnounce=self.inTeam and db('SERVER:GROUP:LEADER_INDEX')%16==15
   if mayAnnounce then
    if announce<0 then
     sub:addSeparator()
@@ -458,7 +458,7 @@ do
  end
  function R:currentLeaderName()
   if not ready() or not self.inTeam then return '' end
-  if db('SERVER:USER:TEAM_LEADER')==1 then return tostring(getPlayerName() or '') end
+  if db('SERVER:GROUP:LEADER_INDEX')%16==15 then return tostring(getPlayerName() or '') end
   local leader=db('SERVER:GROUP:LEADER_INDEX')
   local t=RyzomTeamUI
   if t then
@@ -496,7 +496,7 @@ do
  function R:announce()
   if self.failed or not ready() then return false end
   self:observeSession()
-  if not self.inTeam or db('SERVER:USER:TEAM_LEADER')~=1 then return false end
+  if not self.inTeam or db('SERVER:GROUP:LEADER_INDEX')%16~=15 then return false end
   local prefix='[PadUI] '
   local current=prefix
   for _,entry in ipairs(self:roleRoster()) do
