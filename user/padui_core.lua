@@ -234,7 +234,7 @@ do
  end
  R.order,R.art=ORDER,art
  R.roles,R.icons,R.epoch={}, {}, 0
- R.chatList,R.chatSeen=nil,nil
+ R.chatList,R.chatSeen,R.chatTail=nil,nil,nil
  R.stats={builds=0,paints=0,chatRead=0,chatApplied=0,chatSent=0}
  R.compiled={}
  function R:rectangles(role,size)
@@ -317,7 +317,7 @@ do
  end
  function R:reset()
   self.roles={};self.menuMember=nil;self.epoch=self.epoch+1
-  self.chatList=nil;self.chatSeen=nil
+  self.chatList=nil;self.chatSeen=nil;self.chatTail=nil
   for _,icon in pairs(self.icons) do icon.layoutKey=nil end
  end
  -- This observes the existing shared team update; no additional frame hook.
@@ -560,17 +560,37 @@ do
   local list=getUI('ui:interface:team_chat:content:cb:text_list',false)
   if not list then return end
   local count=tonumber(list.childrenNb) or 0
+  local function textAt(i)
+   local child=list:getChild(i)
+   return child and child.right_click_params or ''
+  end
   if self.chatList~=list or self.chatSeen==nil or count<self.chatSeen then
    self.chatList=list;self.chatSeen=count
+   self.chatTail=count>0 and textAt(count-1) or nil
    return
   end
-  for i=self.chatSeen,count-1 do
-   local child=list:getChild(i)
-   local raw=child and child.right_click_params or ''
+  local start=self.chatSeen
+  if self.chatTail and count>0 then
+   local found=nil
+   for i=count-1,0,-1 do
+    if textAt(i)==self.chatTail then found=i;break end
+   end
+   if found then
+    start=found+1
+   elseif count==self.chatSeen then
+    -- History was cleared/replaced while keeping the same size: establish a
+    -- fresh baseline instead of replaying old visible chat.
+    self.chatSeen=count;self.chatTail=textAt(count-1)
+    return
+   end
+  end
+  for i=start,count-1 do
+   local raw=textAt(i)
    self.stats.chatRead=self.stats.chatRead+1
    if raw and raw~='' then self:applyChatLine(raw) end
   end
   self.chatSeen=count
+  self.chatTail=count>0 and textAt(count-1) or nil
  end
  function R:guard(method,...)
   if self.failed then return false end
