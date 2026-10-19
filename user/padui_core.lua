@@ -175,8 +175,8 @@ function P:start()
  P:localize(true)
 end
 
--- Local team roles, stage 1. No chat listener, network sender or saved roles.
--- Kept in this already-linked file; the tested team mover is not replaced.
+-- Team roles, stage 2 test: local symbols plus explicit team-chat proclamation.
+-- No extra channel, background sender or saved roles; the tested team mover is not replaced.
 PadUITeamRoles = {}
 do
  local R = PadUITeamRoles
@@ -184,11 +184,11 @@ do
  local TEMPLATE = 'padui_local_role_icon_v1'
  local ORDER = {'tank','heal','melee','ele','affliction','none'}
  local words = {
-  de={menu='Rolle zuweisen (lokal)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='Keine Rolle',
+  de={menu='Rolle zuweisen (lokal)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='Keine Rolle',announce='Rollen im Teamchat bekanntgeben',
    tips={tank='Tank',heal='Heiler',melee='Nahkampf',ele='Elementarmagie',affliction='Affliction',none='Keine Rolle'}},
-  en={menu='Assign role (local)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='No role',
+  en={menu='Assign role (local)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='No role',announce='Announce roles in team chat',
    tips={tank='Tank',heal='Healer',melee='Melee',ele='Elemental magic',affliction='Affliction',none='No role'}},
-  fr={menu='Attribuer un r\195\180le (local)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='Aucun r\195\180le',
+  fr={menu='Attribuer un r\195\180le (local)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='Aucun r\195\180le',announce='Annoncer les r\195\180les dans le chat d\226\128\153\195\169quipe',
    tips={tank='Tank',heal='Soins',melee='Corps \195\160 corps',ele='Magie \195\169l\195\169mentaire',affliction='Affliction',none='Aucun r\195\180le'}}
  }
  -- Original pixel-art masks. o = dark contour, x = role colour, h = light.
@@ -218,13 +218,24 @@ do
  local function db(p) return tonumber(getDbProp(p)) or 0 end
  local function labels() return words[PadUI:language()] or words.en end
  local function set(n,k,value) if n and n[k]~=value then n[k]=value end end
+ local function normalizeName(value)
+  local s=tostring(value or ''):gsub('@%b{}','')
+  s=s:gsub('%s*%(.*$',''):match('^%s*(.-)%s*$') or ''
+  return s:lower()
+ end
+ local function stripChat(value)
+  local s=tostring(value or ''):gsub('@%b{}',''):gsub('{break}','')
+  s=s:gsub('^%s*%[%d%d?:%d%d?:%d%d[^%]]*%]%s*','')
+  return s
+ end
  local function key(m)
   if not m then return nil end
   return m.self and 'self' or ('uid:'..m.uid..':'..m.nameId)
  end
  R.order,R.art=ORDER,art
  R.roles,R.icons,R.epoch={}, {}, 0
- R.stats={builds=0,paints=0}
+ R.chatList,R.chatSeen=nil,nil
+ R.stats={builds=0,paints=0,chatRead=0,chatApplied=0,chatSent=0}
  R.compiled={}
  function R:rectangles(role,size)
   if role=='none' then return {} end
@@ -306,6 +317,7 @@ do
  end
  function R:reset()
   self.roles={};self.menuMember=nil;self.epoch=self.epoch+1
+  self.chatList=nil;self.chatSeen=nil
   for _,icon in pairs(self.icons) do icon.layoutKey=nil end
  end
  -- This observes the existing shared team update; no additional frame hook.
@@ -411,6 +423,19 @@ do
    if not rightGroup then sub:setUserGroupRight(line,mark.group) end
    self:paint(mark,current==role and 'check' or 'none',9)
   end
+  local announceId='padui_role_announce'
+  local announce=sub:getLineFromId(announceId)
+  local mayAnnounce=self.inTeam and db('SERVER:USER:TEAM_LEADER')==1
+  if mayAnnounce then
+   if announce<0 then
+    sub:addSeparator()
+    addLine(sub,w.announce,'PadUITeamRoles:announce()',announceId)
+    announce=sub:getLineFromId(announceId)
+   end
+   if announce>=0 then set(getUI(MENU..':'..announceId,false),'hardtext',w.announce) end
+  elseif announce>=0 then
+   sub:removeLine(announce)
+  end
  end
  function R:assign(role)
   -- A menu callback carries only a whitelisted role, never executable data.
@@ -430,6 +455,122 @@ do
    end
   end
   return false
+ end
+ function R:currentLeaderName()
+  if not ready() or not self.inTeam then return '' end
+  if db('SERVER:USER:TEAM_LEADER')==1 then return tostring(getPlayerName() or '') end
+  local leader=db('SERVER:GROUP:LEADER_INDEX')
+  local t=RyzomTeamUI
+  if t then
+   for _,v in ipairs(t.cards or {}) do
+    local m=v.member
+    if m and not m.self and m.index==leader then return tostring(m.name or '') end
+   end
+  end
+  return ''
+ end
+ function R:roleRoster()
+  local t=RyzomTeamUI
+  local out={{name=tostring(getPlayerName() or ''),role=self.roles.self or 'none'}}
+  if t then
+   for _,m in pairs(t.members or {}) do
+    if m and not m.self and m.name and m.name~='' then
+     out[#out+1]={name=m.name,role=self.roles[key(m)] or 'none'}
+    end
+   end
+  end
+  table.sort(out,function(a,b) return normalizeName(a.name)<normalizeName(b.name) end)
+  return out
+ end
+ local roleToken={tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='None'}
+ local tokenRole={tank='tank',heal='heal',melee='melee',ele='ele',affliction='affliction',none='none'}
+ function R:sendTeamMessage(message)
+  local eb=getUI('ui:interface:team_chat:content:ebw:eb',false)
+  if not eb then error('Native team-chat input is unavailable') end
+  local previous=eb.input_string or ''
+  eb.input_string=message
+  runAH(eb,'chat_box_entry','')
+  if previous~='' then eb.input_string=previous end
+  self.stats.chatSent=self.stats.chatSent+1
+ end
+ function R:announce()
+  if self.failed or not ready() then return false end
+  self:observeSession()
+  if not self.inTeam or db('SERVER:USER:TEAM_LEADER')~=1 then return false end
+  local prefix='[PadUI] '
+  local current=prefix
+  for _,entry in ipairs(self:roleRoster()) do
+   local token=entry.name..': '..roleToken[entry.role]
+   local piece=(current==prefix and '' or '; ')..token
+   if #current+#piece>240 and current~=prefix then
+    self:sendTeamMessage(current)
+    current=prefix..token
+   else
+    current=current..piece
+   end
+  end
+  if current~=prefix then self:sendTeamMessage(current) end
+  return true
+ end
+ function R:memberRoleMap()
+  local map={}
+  local own=tostring(getPlayerName() or '')
+  if own~='' then map[normalizeName(own)]='self' end
+  local t=RyzomTeamUI
+  if t then
+   for _,m in pairs(t.members or {}) do
+    if m and m.name and m.name~='' then map[normalizeName(m.name)]=key(m) end
+   end
+  end
+  return map
+ end
+ function R:applyChatLine(raw)
+  local line=stripChat(raw)
+  local tagStart=line:find('[PadUI]',1,true)
+  if not tagStart then return false end
+  local leader=self:currentLeaderName()
+  if leader=='' then return false end
+  local before=line:sub(1,tagStart-1):gsub('%s+$','')
+  local explicit=before:match('^%s*(.-)%s*:%s*$')
+  if explicit and normalizeName(explicit)~=normalizeName(leader) then return false end
+  if not explicit and not normalizeName(before):find(normalizeName(leader),1,true) then return false end
+  local roster=self:memberRoleMap()
+  local changedAny=false
+  local payload=line:sub(tagStart+7)
+  for part in payload:gmatch('[^;]+') do
+   local name,token=part:match('^%s*(.-)%s*:%s*([%a]+)%s*$')
+   local role=token and tokenRole[token:lower()] or nil
+   local memberKey=name and roster[normalizeName(name)] or nil
+   if memberKey and role then
+    self.roles[memberKey]=role~='none' and role or nil
+    changedAny=true
+   end
+  end
+  if changedAny then
+   self.stats.chatApplied=self.stats.chatApplied+1
+   local t=RyzomTeamUI
+   if t and t.uiReady and t.geometryKey then self:render(t) end
+  end
+  return changedAny
+ end
+ function R:pollChat()
+  if not ready() then return end
+  self:observeSession()
+  if not self.inTeam then return end
+  local list=getUI('ui:interface:team_chat:content:cb:text_list',false)
+  if not list then return end
+  local count=tonumber(list.childrenNb) or 0
+  if self.chatList~=list or self.chatSeen==nil or count<self.chatSeen then
+   self.chatList=list;self.chatSeen=count
+   return
+  end
+  for i=self.chatSeen,count-1 do
+   local child=list:getChild(i)
+   local raw=child and child.right_click_params or ''
+   self.stats.chatRead=self.stats.chatRead+1
+   if raw and raw~='' then self:applyChatLine(raw) end
+  end
+  self.chatSeen=count
  end
  function R:guard(method,...)
   if self.failed then return false end
@@ -458,7 +599,9 @@ do
    local original=t.update
    t._paduiRolesUpdate=function(self,...)
     PadUITeamRoles:guard('observeSession')
-    return original(self,...)
+    local result=original(self,...)
+    PadUITeamRoles:guard('pollChat')
+    return result
    end
    t.update=t._paduiRolesUpdate
   end
