@@ -328,7 +328,6 @@ PadUINativeWindows={
  "ui:interface:create_new_party_chat",
  "ui:interface:cs_browser",
  "ui:interface:death_warning",
- "ui:interface:defense",
  "ui:interface:edit_custom",
  "ui:interface:encyclopedia",
  "ui:interface:enter_landmark_name",
