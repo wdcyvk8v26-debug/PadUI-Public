@@ -769,64 +769,6 @@
     </group>
   </group>
   <tree node="team_share" />
-  <proc id="defense_active">
-    <action handler="set" params="dblink=UI:VARIABLES:ISACTIVE:DEFENSE|value=1" />
-  </proc>
-  <proc id="defense_deactive">
-    <action handler="set" params="dblink=UI:VARIABLES:ISACTIVE:DEFENSE|value=0" />
-  </proc>
-  <style style="defense_armor" type="sheet" menu_r="%self_item_modal_menu" selection_group="inventory_selection" auto_grayed="false" />
-  <template name="defense_value" x="0" y="1" w="40" h="12" posref="BM BM" keep="true" id="" val_defense="" parent="">
-    <group id="#id" posref="#posref" w="#w" h="#h" x="#x" y="#y" posparent="#posparent">
-      <view type="bitmap" id="back" posref="TL TL" texture="blank.tga" scale="true" sizeref="wh" color="0 0 0 80" global_color="false" />
-      <view type="text_number" id="value" posref="TM TM" x="2" y="-2" color="255 255 255 255" shadow="true" global_color="false" fontsize="10" value="#val_defense" />
-      <view type="text" id="sign" posref="ML MR" x="1" y="0" color="152 211 72 255" posparent="value" shadow="true" global_color="false" fontsize="10" hardtext="+" />
-      <link expr="gt(@#val_defense,0)" target="sign:active" />
-      <link expr="ifthenelse(lt(@#val_defense,0),'-2',                                                 ifthenelse(gt(@#val_defense,0),'1','0'))" target="value:x" />
-      <link expr="ifthenelse(lt(@#val_defense,0),'236 74 36 255',                                                 ifthenelse(gt(@#val_defense,0),'152 211 72 255', '255 255 255 255'))" target="value:color" />
-    </group>
-  </template>
-  <group type="container" id="defense" w="94" h="256" title="uiDefenseTitle" min_w="94" max_w="94" min_h="236" max_h="236" resizer="false" locked="true" header_active="true" right_button="true" movable="true" active="false" opened="true" openable="false" global_color="false" header_color="UI:SAVE:WIN:COLORS:INV" title_class="formated" on_active="proc" on_active_params="defense_active" on_deactive="proc" on_deactive_params="defense_deactive">
-    <group id="header_closed" x="0" y="0" h="12" posref="TL TL" />
-    <group id="header_opened" x="0" y="0" w="86" h="248" posref="TL TL" group_onclick_r="active_menu" group_params_r="menu=ui:interface:base_menu_with_color">
-      <group id="styles" posref="TM TM" y="-20" sizeref="w" w="0" h="50">
-        <ctrl style="defense_style_button" id="style1" posref="TM TM" y="0" hardtext="uiStyle1" onclick_l="dodge" params_l="" />
-        <ctrl style="defense_style_button" id="style2" posref="BM BM" y="0" hardtext="uiStyle2" onclick_l="parry" params_l="" />
-        <link expr="eq(@SERVER:DEFENSE:DEFENSE_MODE,0)" target="style1:pushed" />
-        <link expr="eq(@SERVER:DEFENSE:DEFENSE_MODE,1)" target="style2:pushed" />
-      </group>
-      <group id="armors" posref="BR BR" w="86" h="174" x="0" y="0">
-        <ctrl style="defense_armor" id="head" posref="TL TL" x="0" y="0" tx_noitem="W_AR_helmet.tga" item_slot="HEAD" value="%head" tooltip="uittDefenseHead" />
-        <ctrl style="defense_armor" id="chest" posref="BL TL" posparent="head" x="0" y="-2" tx_noitem="W_AR_gilet.tga" item_slot="CHEST" value="%chest" tooltip="uittDefenseChest" />
-        <ctrl style="defense_armor" id="legs" posref="BL TL" posparent="chest" x="0" y="-2" tx_noitem="W_AR_pantabotte.tga" item_slot="LEGS" value="%legs" tooltip="uittDefenseLegs" />
-        <ctrl style="defense_armor" id="feet" posref="BL TL" posparent="legs" x="0" y="-2" tx_noitem="W_AR_botte.tga" item_slot="FEET" value="%feet" tooltip="uittDefenseFeet" />
-        <ctrl style="defense_armor" id="arms" posref="TR TL" posparent="chest" x="2" y="11" tx_noitem="W_AR_armpad.tga" item_slot="ARMS" value="%arms" tooltip="uittDefenseArms" />
-        <ctrl style="defense_armor" id="hands" posref="BL TL" posparent="arms" x="0" y="-2" tx_noitem="W_AR_hand.tga" item_slot="HANDS" value="%hands" tooltip="uittDefenseHands" />
-        <ctrl id="all" type="text_button" button_type="radio_button" posref="BR BR" wmin="42" y="0" tx_normal="w_defense_normal" tx_pushed="w_defense" tx_over="w_defense" text_y="-2" fontsize="12" shadow="true" hardtext="uiDefenseReset" color="255 255 255 255" col_over="255 255 255 255" col_pushed="255 190 0 255" global_color_normal="true" global_color_over="true" global_color_pushed="false" text_color_normal="255 255 255 160" text_color_pushed="255 255 255 255" text_color_over="255 255 255 255" text_shadow_color_normal="0 0 0 255" text_shadow_color_pushed="0 0 0 255" text_shadow_color_over="0 0 0 255" text_global_color_normal="true" text_global_color_pushed="false" text_global_color_over="true" onclick_l="select_protected_slot" params_l="UNDEFINED" />
-        <ctrl style="defense_button" id="head_button" posparent="head" posref="MM MM" onclick_l="select_protected_slot" params_l="Head" />
-        <ctrl style="defense_button" id="chest_button" posparent="chest" posref="MM MM" onclick_l="select_protected_slot" params_l="Body" />
-        <ctrl style="defense_button" id="arms_button" posparent="arms" posref="MM MM" onclick_l="select_protected_slot" params_l="Arms" />
-        <ctrl style="defense_button" id="hands_button" posparent="hands" posref="MM MM" onclick_l="select_protected_slot" params_l="Hands" />
-        <ctrl style="defense_button" id="legs_button" posparent="legs" posref="MM MM" onclick_l="select_protected_slot" params_l="Legs" />
-        <ctrl style="defense_button" id="feet_button" posparent="feet" posref="MM MM" onclick_l="select_protected_slot" params_l="Feet" />
-        <link expr="eq(@SERVER:DEFENSE:PROTECTED_SLOT,0)" target="all:pushed" />
-        <link expr="eq(@SERVER:DEFENSE:PROTECTED_SLOT,1)" target="head_button:pushed" />
-        <link expr="eq(@SERVER:DEFENSE:PROTECTED_SLOT,2)" target="chest_button:pushed" />
-        <link expr="eq(@SERVER:DEFENSE:PROTECTED_SLOT,3)" target="arms_button:pushed" />
-        <link expr="eq(@SERVER:DEFENSE:PROTECTED_SLOT,4)" target="hands_button:pushed" />
-        <link expr="eq(@SERVER:DEFENSE:PROTECTED_SLOT,5)" target="legs_button:pushed" />
-        <link expr="eq(@SERVER:DEFENSE:PROTECTED_SLOT,6)" target="feet_button:pushed" />
-        <instance template="defense_value" id="head_val" posparent="head" val_defense="SERVER:DEFENSE:SLOTS:0:MODIFIER" />
-        <instance template="defense_value" id="chest_val" posparent="chest" val_defense="SERVER:DEFENSE:SLOTS:1:MODIFIER" />
-        <instance template="defense_value" id="arms_val" posparent="arms" val_defense="SERVER:DEFENSE:SLOTS:2:MODIFIER" />
-        <instance template="defense_value" id="hands_val" posparent="hands" val_defense="SERVER:DEFENSE:SLOTS:3:MODIFIER" />
-        <instance template="defense_value" id="legs_val" posparent="legs" val_defense="SERVER:DEFENSE:SLOTS:4:MODIFIER" />
-        <instance template="defense_value" id="feet_val" posparent="feet" val_defense="SERVER:DEFENSE:SLOTS:5:MODIFIER" />
-      </group>
-    </group>
-    <group id="content" w="0" h="0" />
-  </group>
-  <tree node="defense" />
   <define id="edit_custom_edit_large" value="ui:interface:edit_custom:content:scroll_text:edit_large" />
   <define id="edit_custom_edit_box_large" value="ui:interface:edit_custom:content:scroll_text:edit_large:eb" />
   <define id="edit_custom_edit_short" value="ui:interface:edit_custom:content:scroll_text:edit_short" />
