@@ -163,8 +163,9 @@ function P:start()
  P.Settings = PadUISettings
  P.Timers = PadUITimers
  P.Mobs = PadUIMobs
+ P.TeamRoles = PadUITeamRoles
  -- One failed window initializer must not prevent the others from starting.
- for _,name in ipairs({"Skill","Items","Auras","Settings","Timers","Mobs"}) do
+ for _,name in ipairs({"Skill","Items","Auras","Settings","Timers","Mobs","TeamRoles"}) do
   local module=P[name]
   if module then
    local ok,err=pcall(function() module:start() end)
@@ -172,4 +173,725 @@ function P:start()
   end
  end
  P:localize(true)
+end
+
+-- Team roles, stage 2 test: local symbols plus explicit team-chat proclamation.
+-- No extra channel, background sender or saved roles; the tested team mover is not replaced.
+PadUITeamRoles = {}
+do
+ local R = PadUITeamRoles
+ local MENU = 'ui:interface:team_compact_menu'
+ local TEMPLATE = 'padui_local_role_icon_v1'
+ local ORDER = {'tank','heal','melee','ele','affliction','none'}
+ local words = {
+  de={menu='Rolle zuweisen (lokal)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='Keine Rolle',announce='Rollen im Teamchat bekanntgeben',
+   tips={tank='Tank',heal='Heiler',melee='Nahkampf',ele='Elementarmagie',affliction='Affliction',none='Keine Rolle'}},
+  en={menu='Assign role (local)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='No role',announce='Announce roles in team chat',
+   tips={tank='Tank',heal='Healer',melee='Melee',ele='Elemental magic',affliction='Affliction',none='No role'}},
+  fr={menu='Attribuer un r\195\180le (local)',tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='Aucun r\195\180le',announce='Annoncer les r\195\180les dans le chat d\226\128\153\195\169quipe',
+   tips={tank='Tank',heal='Soins',melee='Corps \195\160 corps',ele='Magie \195\169l\195\169mentaire',affliction='Affliction',none='Aucun r\195\180le'}}
+ }
+ -- Original pixel-art masks. o = dark contour, x = role colour, h = light.
+ -- The 9px masters retain eyes, sword guards and arrow points at 75% scale.
+ -- Each mask is compiled to merged bitmap rectangles using only blank.tga.
+ local art = {
+  tank={color='80 162 237 255',light='191 226 255 255',
+   large={'.oooooooooo.','ohhhhhhhhhho','ohxxxxxxxxho','ohxxxxxxxxho','ohxxxxxxxxho','ohxxxxxxxxho','.ohxxxxxxho.','.ohxxxxxxho.','..ohxxxxho..','...ohxxho...','....ohho....','.....oo.....'},
+   small={'ooooooooo','ohhhhhhho','ohxxxxxho','ohxxxxxho','.hxxxxxh.','.ohxxxho.','..ohxho..','...oho...','....o....'}},
+  heal={color='65 218 118 255',light='192 255 217 255',
+   large={'....oooo....','...ohhhho...','...oxxxxo...','...oxxxxo...','oooxxxxxxooo','ohhxxxxxxhho','oxxxxxxxxxxo','oooxxxxxxooo','...oxxxxo...','...oxxxxo...','...ohhhho...','....oooo....'},
+   small={'...ooo...','...oxo...','...oxo...','oooxxxooo','oxxxxxxxo','oooxxxooo','...oxo...','...oxo...','...ooo...'}},
+  melee={color='235 91 91 255',light='255 210 198 255',
+   large={'ho........oh','hho......ohh','.hho....ohh.','..hho..ohh..','...hhoohh...','....hhhh....','...oxhhxo...','..oxxooxxo..','.oxxo..oxxo.','..ox....xo..','.oxo....oxo.','oxo......oxo'},
+   small={'ho.....oh','hho...ohh','.hho.ohh.','..hhhhh..','...hhh...','..oxxxo..','.xxo.oxx.','..x...x..','.xo...ox.'}},
+  ele={color='255 151 32 255',light='255 239 174 255',
+   large={'.....x......','..x..hx..x..','...xohxox...','...ohhhxo...','.xohhhhhhxx.','xxhhhoohhhxx','..xhhxxhhx..','..xohhhho...','..xohhxhox..','.x..xhx..x..','....ox......','.....x......'},
+   small={'....x....','.x..h..x.','..xxhxx..','..xhhhx..','xhhhxhhhx','..xhhhx..','..xxhxx..','.x..h..x.','....x....'}},
+  affliction={color='187 113 236 255',light='239 209 255 255',
+   large={'...oooooo...','..ohhhhhho..','.ohxxxxxxho.','ohxxxxxxxxho','ohxooxxooxho','oxxooxxooxxo','oxxxxxxxxxxo','.oxxxooxxxo.','..oxxxxxxo..','...oxxxxo...','...ohxhxo...','....oooo....'},
+   small={'..ooooo..','.ohhhhho.','ohxxxxxho','oxooxooxo','oxooxooxo','.xxxxxxx.','..xxoxx..','..hxhhx..','...ooo...'}},
+  check={color='125 238 154 255',light='125 238 154 255',
+   small={'.......xx','......xx.','.....xx..','x...xx...','xx.xx....','.xxx.....','..x......','.........','.........'}}
+ }
+ local function round(n) return math.floor(n+0.5) end
+ local function ready() return game and game.InGameDbInitialized == true end
+ local function db(p) return tonumber(getDbProp(p)) or 0 end
+ local function labels() return words[PadUI:language()] or words.en end
+ local function set(n,k,value) if n and n[k]~=value then n[k]=value end end
+ local function normalizeName(value)
+  local s=tostring(value or ''):gsub('@%b{}','')
+  s=s:gsub('%s*%(.*$',''):match('^%s*(.-)%s*$') or ''
+  return s:lower()
+ end
+ local function stripChat(value)
+  local s=tostring(value or ''):gsub('@%b{}',''):gsub('{break}','')
+  s=s:gsub('^%s*%[%d%d?:%d%d?:%d%d[^%]]*%]%s*','')
+  return s
+ end
+ local function key(m)
+  if not m then return nil end
+  return m.self and 'self' or ('uid:'..m.uid..':'..m.nameId)
+ end
+ R.order,R.art=ORDER,art
+ R.roles,R.icons,R.epoch={}, {}, 0
+ R.chatList,R.chatSeen,R.chatTail=nil,nil,nil
+ R.stats={builds=0,paints=0,chatRead=0,chatApplied=0,chatSent=0}
+ R.compiled={}
+ function R:rectangles(role,size)
+  if role=='none' then return {} end
+  local id=role..':'..size
+  if self.compiled[id] then return self.compiled[id] end
+  local spec=assert(art[role],'Unknown role artwork')
+  local mask=(size==9 or not spec.large) and spec.small or spec.large
+  local n=#mask;local out,previous={},{}
+  for y=0,size-1 do
+   local source=mask[math.min(n,math.floor((y+0.5)*n/size)+1)]
+   assert(#source==n,'Role mask must be square: '..role)
+   local row={}
+   for x=0,size-1 do row[x]=source:sub(math.min(n,math.floor((x+0.5)*n/size)+1),math.min(n,math.floor((x+0.5)*n/size)+1)) end
+   local x,nextRow=0,{}
+   while x<size do
+    local c,start=row[x],x;x=x+1
+    while x<size and row[x]==c do x=x+1 end
+    if c~='.' then
+     assert(c=='o' or c=='x' or c=='h','Unknown role pixel')
+     local code=start..':'..(x-start)..':'..c
+     local r=previous[code]
+     if r then r.h=r.h+1 else
+      r={x=start,y=-y,w=x-start,h=1,color=c=='o' and '4 9 15 255' or (c=='h' and spec.light or spec.color)}
+      out[#out+1]=r
+     end
+     nextRow[code]=r
+    end
+   end
+   previous=nextRow
+  end
+  self.compiled[id]=out
+  return out
+ end
+ local parts=0
+ for role in pairs(art) do for _,size in ipairs({9,12,15,18}) do parts=math.max(parts,#R:rectangles(role,size)) end end
+ R.parts=parts
+ function R:interfaceXML()
+  local out={'<interface_config><template name="'..TEMPLATE..'" keep="true"><group id="#id" posref="TL TL" w="12" h="12" use_cursor="false" child_resize_w="false" child_resize_h="false">'}
+  for i=1,parts do
+   out[#out+1]='<view type="bitmap" id="p'..i..'" posref="TL TL" w="1" h="1" active="false" texture="blank.tga" scale="true" color="255 255 255 255" global_color="false" />'
+  end
+  out[#out+1]='</group></template></interface_config>'
+  return table.concat(out)
+ end
+ function R:ensureTemplate()
+  local root=getUI('ui:interface',false)
+  if not root then error('Root interface is unavailable') end
+  if self.templateRoot==root then return end
+  if parseInterfaceFromString(self:interfaceXML())==false then error('Cannot register role-icon template') end
+  self.templateRoot=root
+ end
+ function R:icon(parent,id,existing)
+  self:ensureTemplate()
+  local group=existing
+  if not group then
+   group=createGroupInstance(TEMPLATE,parent,{id=id})
+   if not group then error('Cannot create role icon '..id) end
+   self.stats.builds=self.stats.builds+1
+  end
+  local result={group=group,nodes={}}
+  for i=1,parts do
+   result.nodes[i]=group:find('p'..i)
+   if not result.nodes[i] then error('Role icon structure changed; fully restart Ryzom') end
+  end
+  return result
+ end
+ function R:paint(icon,role,size)
+  local id=role..':'..size
+  if icon.paintKey==id then return end
+  local rects=self:rectangles(role,size)
+  set(icon.group,'w',size);set(icon.group,'h',size)
+  for i,n in ipairs(icon.nodes) do
+   local r=rects[i];set(n,'active',r~=nil)
+   if r then
+    for _,p in ipairs({'x','y','w','h','color'}) do set(n,p,r[p]) end
+   end
+  end
+  icon.paintKey=id;self.stats.paints=self.stats.paints+1
+ end
+ function R:reset()
+  self.roles={};self.menuMember=nil;self.epoch=self.epoch+1
+  self.chatList=nil;self.chatSeen=nil;self.chatTail=nil
+  for _,icon in pairs(self.icons) do icon.layoutKey=nil end
+ end
+ -- This observes the existing shared team update; no additional frame hook.
+ -- It still sees leave/join while the team window or self card is hidden.
+ function R:observeSession()
+  local t=RyzomTeamUI
+  if not ready() then
+   if self.wasReady then self:reset() end
+   self.wasReady=false;self.character=nil;self.inTeam=nil
+   self.templateRoot=nil;self.icons={};return
+  end
+  local inTeam=db('SERVER:USER:TEAM_MEMBER')==1
+  local character=t and t.character
+  if not self.wasReady or character~=self.character or inTeam~=self.inTeam then self:reset() end
+  self.wasReady=true;self.character=character;self.inTeam=inTeam
+ end
+ function R:prune()
+  local live={self=true}
+  if self.inTeam then
+   for i=0,7 do
+    local p='SERVER:GROUP:'..i..':'
+    local nameId=db(p..'NAME')
+    if nameId~=0 then live['uid:'..db(p..'UID')..':'..nameId]=true end
+   end
+  end
+  for k in pairs(self.roles) do if not live[k] then self.roles[k]=nil end end
+ end
+ function R:render(t)
+  if not ready() then return end
+  self:observeSession();self:prune()
+  if not t.uiReady or not t.geometryKey then return end
+  local scale=t.scale
+  local size=round(12*scale);local reserve=size+round(4*scale)
+  local locked=db('UI:SAVE:PADUI:TEAM_MODULAR:LOCKED')==1
+  local right=locked and round(4*scale) or math.max(8,round(8*scale))+8
+  local width=math.max(1,t.cellW-right-round(82*scale)-reserve)
+  local w=labels()
+  for _,v in ipairs(t.cards) do
+   if v.member then
+    local header=v.nodes.header
+    local icon=self.icons[v.slot]
+    if not icon or icon.header~=header then
+     local old=header:find('padui_role_icon')
+     icon=self:icon(header.id,'padui_role_icon',old)
+     if not old then header:addGroup(icon.group) end
+     icon.header=header;self.icons[v.slot]=icon
+    end
+    local role=self.roles[key(v.member)] or 'none'
+    self:paint(icon,role,size)
+    set(icon.group,'x',round(8*scale));set(icon.group,'y',0)
+    set(v.nodes.name,'x',round(8*scale)+reserve)
+    local layout=t.geometryKey..':'..tostring(v.inputKey)..':'..v.nodes.name.id
+    if icon.layoutKey~=layout then
+     v.nodes.name:setLineMaxW(width);icon.layoutKey=layout
+    end
+    local tip=v.member.name..' - '..w.tips[role]
+    for _,id in ipairs({'target_button','target_top','target_bottom','target_rim'}) do set(v.nodes[id],'tooltip',tip) end
+   end
+  end
+ end
+ local function addLine(menu,text,action,id)
+  local ok,err=pcall(function() menu:addLine(text,'lua',action,id) end)
+  if not ok then
+   if not ucstring then error(err) end
+   menu:addLine(ucstring(text),'lua',action,id)
+  end
+ end
+ function R:prepareMenu(m)
+  self.menuMember=nil
+  if not ready() then return end
+  self:observeSession();self:prune()
+  if not m then return end
+  local menu=getUI(MENU,false);if not menu then return end
+  local root=menu:getRootMenu();local w=labels()
+  local index=root:getLineFromId('padui_roles')
+  if index<0 then
+   root:addSeparator();addLine(root,w.menu,'','padui_roles')
+   index=root:getLineFromId('padui_roles')
+  end
+  assert(index>=0 and index<root:getNumLine(),'Invalid roles menu index')
+  local sub=root:getSubMenu(index)
+  if not sub then sub=root:addSubMenu(index);sub.active=false end
+  set(getUI(MENU..':padui_roles',false),'hardtext',w.menu)
+  self.menuMember={key=key(m),epoch=self.epoch,character=self.character}
+  local current=self.roles[key(m)] or 'none'
+  for _,role in ipairs(ORDER) do
+   local id='padui_role_'..role
+   local line=sub:getLineFromId(id)
+   if line<0 then
+    if role=='none' then sub:addSeparator() end
+    addLine(sub,w[role],"PadUITeamRoles:assign('"..role.."')",id)
+    line=sub:getLineFromId(id)
+   end
+   assert(line>=0 and line<sub:getNumLine(),'Invalid role entry index')
+   set(getUI(MENU..':'..id,false),'hardtext',w[role])
+   -- Native user-group ownership supplies real graphics beside menu labels.
+   local left=sub:getUserGroupLeft(line)
+   local icon=self:icon(MENU,id..'_icon',left)
+   if not left then sub:setUserGroupLeft(line,icon.group) end
+   self:paint(icon,role,12)
+   local rightGroup=sub:getUserGroupRight(line)
+   local mark=self:icon(MENU,id..'_mark',rightGroup)
+   if not rightGroup then sub:setUserGroupRight(line,mark.group) end
+   self:paint(mark,current==role and 'check' or 'none',9)
+  end
+  local announceId='padui_role_announce'
+  local announce=sub:getLineFromId(announceId)
+  local mayAnnounce=self.inTeam and db('SERVER:GROUP:LEADER_INDEX')%16==15
+  if mayAnnounce then
+   if announce<0 then
+    sub:addSeparator()
+    addLine(sub,w.announce,'PadUITeamRoles:announce()',announceId)
+    announce=sub:getLineFromId(announceId)
+   end
+   if announce>=0 then set(getUI(MENU..':'..announceId,false),'hardtext',w.announce) end
+  elseif announce>=0 then
+   sub:removeLine(announce)
+  end
+ end
+ function R:assign(role)
+  -- A menu callback carries only a whitelisted role, never executable data.
+  local allowed=false
+  for _,r in ipairs(ORDER) do if role==r then allowed=true end end
+  if not allowed or self.failed or not ready() then return false end
+  local snapshot=self.menuMember;self.menuMember=nil
+  self:observeSession()
+  local t=RyzomTeamUI
+  if not snapshot or snapshot.epoch~=self.epoch or snapshot.character~=self.character
+   or not t or not t.uiReady or t.failed then return false end
+  for _,v in ipairs(t.cards) do
+   if v.member and key(v.member)==snapshot.key and t:validMember(v.member) then
+    self.roles[snapshot.key]=role~='none' and role or nil
+    self:guard('render',t)
+    return not self.failed
+   end
+  end
+  return false
+ end
+ function R:currentLeaderName()
+  if not ready() or not self.inTeam then return '' end
+  if db('SERVER:GROUP:LEADER_INDEX')%16==15 then return tostring(getPlayerName() or '') end
+  local leader=db('SERVER:GROUP:LEADER_INDEX')
+  local t=RyzomTeamUI
+  if t then
+   for _,v in ipairs(t.cards or {}) do
+    local m=v.member
+    if m and not m.self and m.index==leader then return tostring(m.name or '') end
+   end
+  end
+  return ''
+ end
+ function R:roleRoster()
+  local t=RyzomTeamUI
+  local out={{name=tostring(getPlayerName() or ''),role=self.roles.self or 'none'}}
+  if t then
+   for _,m in pairs(t.members or {}) do
+    if m and not m.self and m.name and m.name~='' then
+     out[#out+1]={name=m.name,role=self.roles[key(m)] or 'none'}
+    end
+   end
+  end
+  table.sort(out,function(a,b) return normalizeName(a.name)<normalizeName(b.name) end)
+  return out
+ end
+ local roleToken={tank='Tank',heal='Heal',melee='Melee',ele='Ele',affliction='Affliction',none='None'}
+ local tokenRole={tank='tank',heal='heal',melee='melee',ele='ele',affliction='affliction',none='none'}
+ function R:sendTeamMessage(message)
+  local eb=getUI('ui:interface:team_chat:content:ebw:eb',false)
+  if not eb then error('Native team-chat input is unavailable') end
+  local previous=eb.input_string or ''
+  eb.input_string=message
+  runAH(eb,'chat_box_entry','')
+  if previous~='' then eb.input_string=previous end
+  self.stats.chatSent=self.stats.chatSent+1
+ end
+ function R:announce()
+  if self.failed or not ready() then return false end
+  self:observeSession()
+  if not self.inTeam or db('SERVER:GROUP:LEADER_INDEX')%16~=15 then return false end
+  local prefix='[PadUI] '
+  local current=prefix
+  for _,entry in ipairs(self:roleRoster()) do
+   local token=entry.name..': '..roleToken[entry.role]
+   local piece=(current==prefix and '' or '; ')..token
+   if #current+#piece>240 and current~=prefix then
+    self:sendTeamMessage(current)
+    current=prefix..token
+   else
+    current=current..piece
+   end
+  end
+  if current~=prefix then self:sendTeamMessage(current) end
+  return true
+ end
+ function R:memberRoleMap()
+  local map={}
+  local own=tostring(getPlayerName() or '')
+  if own~='' then map[normalizeName(own)]='self' end
+  local t=RyzomTeamUI
+  if t then
+   for _,m in pairs(t.members or {}) do
+    if m and m.name and m.name~='' then map[normalizeName(m.name)]=key(m) end
+   end
+  end
+  return map
+ end
+ function R:applyChatLine(raw)
+  local line=stripChat(raw)
+  local tagStart=line:find('[PadUI]',1,true)
+  if not tagStart then return false end
+  local leader=self:currentLeaderName()
+  if leader=='' then return false end
+  local before=line:sub(1,tagStart-1)
+  -- The stored chat sentence is localized ("Name says:", "Name sagt:",
+  -- "Name dit :", ...). Validate only that the current leader's exact name
+  -- starts the rendered sender part, then ignore the localized speech verb.
+  local sender=normalizeName(before)
+  local leaderName=normalizeName(leader)
+  if sender:sub(1,#leaderName)~=leaderName then return false end
+  local boundary=sender:sub(#leaderName+1,#leaderName+1)
+  if boundary~='' and boundary~=' ' then return false end
+  local roster=self:memberRoleMap()
+  local changedAny=false
+  local payload=line:sub(tagStart+7)
+  for part in payload:gmatch('[^;]+') do
+   local name,token=part:match('^%s*(.-)%s*:%s*([%a]+)%s*$')
+   local role=token and tokenRole[token:lower()] or nil
+   local memberKey=name and roster[normalizeName(name)] or nil
+   if memberKey and role then
+    self.roles[memberKey]=role~='none' and role or nil
+    changedAny=true
+   end
+  end
+  if changedAny then
+   self.stats.chatApplied=self.stats.chatApplied+1
+   local t=RyzomTeamUI
+   if t and t.uiReady and t.geometryKey then self:render(t) end
+  end
+  return changedAny
+ end
+ function R:pollChat()
+  if not ready() then return end
+  self:observeSession()
+  if not self.inTeam then return end
+  local list=getUI('ui:interface:team_chat:content:cb:text_list',false)
+  if not list then return end
+  local count=tonumber(list.childrenNb) or 0
+  local function textAt(i)
+   local child=list:getChild(i)
+   return child and child.right_click_params or ''
+  end
+  if self.chatList~=list or self.chatSeen==nil or count<self.chatSeen then
+   self.chatList=list;self.chatSeen=count
+   self.chatTail=count>0 and textAt(count-1) or nil
+   return
+  end
+  local start=self.chatSeen
+  if self.chatTail and count>0 then
+   local found=nil
+   for i=count-1,0,-1 do
+    if textAt(i)==self.chatTail then found=i;break end
+   end
+   if found then
+    start=found+1
+   elseif count==self.chatSeen then
+    -- History was cleared/replaced while keeping the same size: establish a
+    -- fresh baseline instead of replaying old visible chat.
+    self.chatSeen=count;self.chatTail=textAt(count-1)
+    return
+   end
+  end
+  for i=start,count-1 do
+   local raw=textAt(i)
+   self.stats.chatRead=self.stats.chatRead+1
+   if raw and raw~='' then self:applyChatLine(raw) end
+  end
+  self.chatSeen=count
+  self.chatTail=count>0 and textAt(count-1) or nil
+ end
+ function R:guard(method,...)
+  if self.failed then return false end
+  local ok,err=pcall(self[method],self,...)
+  if not ok then
+   self.failed=tostring(err)
+   -- A role error must not disable the working team display or its controls.
+   for _,icon in pairs(self.icons) do pcall(function() icon.group.active=false end) end
+   local t=RyzomTeamUI
+   if t and t.scale then
+    for _,v in ipairs(t.cards) do pcall(function()
+     set(v.nodes.name,'x',round(8*t.scale));v.inputKey=nil
+    end) end
+   end
+   pcall(function() set(getUI(MENU..':padui_roles',false),'grayed',true) end)
+   pcall(debugInfo,'PadUI local roles: '..self.failed)
+   pcall(displaySystemInfo,'PadUI roles: '..self.failed,'SYS')
+  end
+  return ok
+ end
+ function R:start()
+  local t=RyzomTeamUI
+  if not t or not t.render or not t.update or not t.click then error('Modular team controller is unavailable') end
+  -- Wrappers resolve the current global module, so reloads do not stack them.
+  if t.update~=t._paduiRolesUpdate then
+   local original=t.update
+   t._paduiRolesUpdate=function(self,...)
+    PadUITeamRoles:guard('observeSession')
+    local result=original(self,...)
+    PadUITeamRoles:guard('pollChat')
+    return result
+   end
+   t.update=t._paduiRolesUpdate
+  end
+  if t.render~=t._paduiRolesRender then
+   local original=t.render
+   t._paduiRolesRender=function(self,...)
+    original(self,...)
+    PadUITeamRoles:guard('render',self)
+   end
+   t.render=t._paduiRolesRender
+  end
+  if t.click~=t._paduiRolesClick then
+   local original=t.click
+   t._paduiRolesClick=function(self,slot,side)
+    local m=self.rows[tonumber(slot)]
+    if side=='right' and ready() and not self.failed and self:validMember(m) then
+     PadUITeamRoles:guard('prepareMenu',m)
+    end
+    return original(self,slot,side)
+   end
+   t.click=t._paduiRolesClick
+  end
+  self:guard('observeSession')
+  -- Also applies when the team was created before PadUI:start() ran.
+  if ready() and t.uiReady and t.geometryKey then self:guard('render',t) end
+ end
+end
+,'')
+  -- Native chat stores the rendered, localized sentence, e.g.
+  -- "Valethira says: [PadUI] ..." / "Valethira sagt: [PadUI] ...".
+  -- Validate the exact leader name at the start and treat the localized
+  -- speech verb that follows it as opaque text.
+  local sender=normalizeName(before:gsub('%s*:%s*
+  local roster=self:memberRoleMap()
+  local changedAny=false
+  local payload=line:sub(tagStart+7)
+  for part in payload:gmatch('[^;]+') do
+   local name,token=part:match('^%s*(.-)%s*:%s*([%a]+)%s*$')
+   local role=token and tokenRole[token:lower()] or nil
+   local memberKey=name and roster[normalizeName(name)] or nil
+   if memberKey and role then
+    self.roles[memberKey]=role~='none' and role or nil
+    changedAny=true
+   end
+  end
+  if changedAny then
+   self.stats.chatApplied=self.stats.chatApplied+1
+   local t=RyzomTeamUI
+   if t and t.uiReady and t.geometryKey then self:render(t) end
+  end
+  return changedAny
+ end
+ function R:pollChat()
+  if not ready() then return end
+  self:observeSession()
+  if not self.inTeam then return end
+  local list=getUI('ui:interface:team_chat:content:cb:text_list',false)
+  if not list then return end
+  local count=tonumber(list.childrenNb) or 0
+  local function textAt(i)
+   local child=list:getChild(i)
+   return child and child.right_click_params or ''
+  end
+  if self.chatList~=list or self.chatSeen==nil or count<self.chatSeen then
+   self.chatList=list;self.chatSeen=count
+   self.chatTail=count>0 and textAt(count-1) or nil
+   return
+  end
+  local start=self.chatSeen
+  if self.chatTail and count>0 then
+   local found=nil
+   for i=count-1,0,-1 do
+    if textAt(i)==self.chatTail then found=i;break end
+   end
+   if found then
+    start=found+1
+   elseif count==self.chatSeen then
+    -- History was cleared/replaced while keeping the same size: establish a
+    -- fresh baseline instead of replaying old visible chat.
+    self.chatSeen=count;self.chatTail=textAt(count-1)
+    return
+   end
+  end
+  for i=start,count-1 do
+   local raw=textAt(i)
+   self.stats.chatRead=self.stats.chatRead+1
+   if raw and raw~='' then self:applyChatLine(raw) end
+  end
+  self.chatSeen=count
+  self.chatTail=count>0 and textAt(count-1) or nil
+ end
+ function R:guard(method,...)
+  if self.failed then return false end
+  local ok,err=pcall(self[method],self,...)
+  if not ok then
+   self.failed=tostring(err)
+   -- A role error must not disable the working team display or its controls.
+   for _,icon in pairs(self.icons) do pcall(function() icon.group.active=false end) end
+   local t=RyzomTeamUI
+   if t and t.scale then
+    for _,v in ipairs(t.cards) do pcall(function()
+     set(v.nodes.name,'x',round(8*t.scale));v.inputKey=nil
+    end) end
+   end
+   pcall(function() set(getUI(MENU..':padui_roles',false),'grayed',true) end)
+   pcall(debugInfo,'PadUI local roles: '..self.failed)
+   pcall(displaySystemInfo,'PadUI roles: '..self.failed,'SYS')
+  end
+  return ok
+ end
+ function R:start()
+  local t=RyzomTeamUI
+  if not t or not t.render or not t.update or not t.click then error('Modular team controller is unavailable') end
+  -- Wrappers resolve the current global module, so reloads do not stack them.
+  if t.update~=t._paduiRolesUpdate then
+   local original=t.update
+   t._paduiRolesUpdate=function(self,...)
+    PadUITeamRoles:guard('observeSession')
+    local result=original(self,...)
+    PadUITeamRoles:guard('pollChat')
+    return result
+   end
+   t.update=t._paduiRolesUpdate
+  end
+  if t.render~=t._paduiRolesRender then
+   local original=t.render
+   t._paduiRolesRender=function(self,...)
+    original(self,...)
+    PadUITeamRoles:guard('render',self)
+   end
+   t.render=t._paduiRolesRender
+  end
+  if t.click~=t._paduiRolesClick then
+   local original=t.click
+   t._paduiRolesClick=function(self,slot,side)
+    local m=self.rows[tonumber(slot)]
+    if side=='right' and ready() and not self.failed and self:validMember(m) then
+     PadUITeamRoles:guard('prepareMenu',m)
+    end
+    return original(self,slot,side)
+   end
+   t.click=t._paduiRolesClick
+  end
+  self:guard('observeSession')
+  -- Also applies when the team was created before PadUI:start() ran.
+  if ready() and t.uiReady and t.geometryKey then self:guard('render',t) end
+ end
+end
+,''))
+  local leaderName=normalizeName(leader)
+  if sender:sub(1,#leaderName)~=leaderName then return false end
+  local boundary=sender:sub(#leaderName+1,#leaderName+1)
+  if boundary~='' and boundary~=' ' then return false end
+  local roster=self:memberRoleMap()
+  local changedAny=false
+  local payload=line:sub(tagStart+7)
+  for part in payload:gmatch('[^;]+') do
+   local name,token=part:match('^%s*(.-)%s*:%s*([%a]+)%s*$')
+   local role=token and tokenRole[token:lower()] or nil
+   local memberKey=name and roster[normalizeName(name)] or nil
+   if memberKey and role then
+    self.roles[memberKey]=role~='none' and role or nil
+    changedAny=true
+   end
+  end
+  if changedAny then
+   self.stats.chatApplied=self.stats.chatApplied+1
+   local t=RyzomTeamUI
+   if t and t.uiReady and t.geometryKey then self:render(t) end
+  end
+  return changedAny
+ end
+ function R:pollChat()
+  if not ready() then return end
+  self:observeSession()
+  if not self.inTeam then return end
+  local list=getUI('ui:interface:team_chat:content:cb:text_list',false)
+  if not list then return end
+  local count=tonumber(list.childrenNb) or 0
+  local function textAt(i)
+   local child=list:getChild(i)
+   return child and child.right_click_params or ''
+  end
+  if self.chatList~=list or self.chatSeen==nil or count<self.chatSeen then
+   self.chatList=list;self.chatSeen=count
+   self.chatTail=count>0 and textAt(count-1) or nil
+   return
+  end
+  local start=self.chatSeen
+  if self.chatTail and count>0 then
+   local found=nil
+   for i=count-1,0,-1 do
+    if textAt(i)==self.chatTail then found=i;break end
+   end
+   if found then
+    start=found+1
+   elseif count==self.chatSeen then
+    -- History was cleared/replaced while keeping the same size: establish a
+    -- fresh baseline instead of replaying old visible chat.
+    self.chatSeen=count;self.chatTail=textAt(count-1)
+    return
+   end
+  end
+  for i=start,count-1 do
+   local raw=textAt(i)
+   self.stats.chatRead=self.stats.chatRead+1
+   if raw and raw~='' then self:applyChatLine(raw) end
+  end
+  self.chatSeen=count
+  self.chatTail=count>0 and textAt(count-1) or nil
+ end
+ function R:guard(method,...)
+  if self.failed then return false end
+  local ok,err=pcall(self[method],self,...)
+  if not ok then
+   self.failed=tostring(err)
+   -- A role error must not disable the working team display or its controls.
+   for _,icon in pairs(self.icons) do pcall(function() icon.group.active=false end) end
+   local t=RyzomTeamUI
+   if t and t.scale then
+    for _,v in ipairs(t.cards) do pcall(function()
+     set(v.nodes.name,'x',round(8*t.scale));v.inputKey=nil
+    end) end
+   end
+   pcall(function() set(getUI(MENU..':padui_roles',false),'grayed',true) end)
+   pcall(debugInfo,'PadUI local roles: '..self.failed)
+   pcall(displaySystemInfo,'PadUI roles: '..self.failed,'SYS')
+  end
+  return ok
+ end
+ function R:start()
+  local t=RyzomTeamUI
+  if not t or not t.render or not t.update or not t.click then error('Modular team controller is unavailable') end
+  -- Wrappers resolve the current global module, so reloads do not stack them.
+  if t.update~=t._paduiRolesUpdate then
+   local original=t.update
+   t._paduiRolesUpdate=function(self,...)
+    PadUITeamRoles:guard('observeSession')
+    local result=original(self,...)
+    PadUITeamRoles:guard('pollChat')
+    return result
+   end
+   t.update=t._paduiRolesUpdate
+  end
+  if t.render~=t._paduiRolesRender then
+   local original=t.render
+   t._paduiRolesRender=function(self,...)
+    original(self,...)
+    PadUITeamRoles:guard('render',self)
+   end
+   t.render=t._paduiRolesRender
+  end
+  if t.click~=t._paduiRolesClick then
+   local original=t.click
+   t._paduiRolesClick=function(self,slot,side)
+    local m=self.rows[tonumber(slot)]
+    if side=='right' and ready() and not self.failed and self:validMember(m) then
+     PadUITeamRoles:guard('prepareMenu',m)
+    end
+    return original(self,slot,side)
+   end
+   t.click=t._paduiRolesClick
+  end
+  self:guard('observeSession')
+  -- Also applies when the team was created before PadUI:start() ran.
+  if ready() and t.uiReady and t.geometryKey then self:guard('render',t) end
+ end
 end
