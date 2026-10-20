@@ -530,7 +530,15 @@ do
   if not tagStart then return false end
   local leader=self:currentLeaderName()
   if leader=='' then return false end
-  local before=line:sub(1,tagStart-1):gsub('%s+
+  local before=line:sub(1,tagStart-1)
+  -- The stored chat sentence is localized ("Name says:", "Name sagt:",
+  -- "Name dit :", ...). Validate only that the current leader's exact name
+  -- starts the rendered sender part, then ignore the localized speech verb.
+  local sender=normalizeName(before)
+  local leaderName=normalizeName(leader)
+  if sender:sub(1,#leaderName)~=leaderName then return false end
+  local boundary=sender:sub(#leaderName+1,#leaderName+1)
+  if boundary~='' and boundary~=' ' then return false end
   local roster=self:memberRoleMap()
   local changedAny=false
   local payload=line:sub(tagStart+7)
