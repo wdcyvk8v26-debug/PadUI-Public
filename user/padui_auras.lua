@@ -136,7 +136,6 @@ function A:update()
   return
  end
  if db('UI:SAVE:PADUI:AURAS:PLACED_012')==0 then A:resetPosition() end
- setDbProp('UI:VARIABLES:ISACTIVE:PADUI_AURAS',window.active and 1 or 0)
  local tick=A:tickNow()
  local entries=A:collect(tick)
  local duration=A:warningSeconds()
@@ -155,6 +154,10 @@ function A:update()
  -- container stays hidden without disabling PadAuras itself.
  local shouldShow=#entries>0 or A.placing or menuPreviewSeconds~=nil
  if window.active~=shouldShow then window.active=shouldShow end
+ local visible=window.active and 1 or 0
+ if db('UI:VARIABLES:ISACTIVE:PADUI_AURAS')~=visible then
+  setDbProp('UI:VARIABLES:ISACTIVE:PADUI_AURAS',visible)
+ end
  if A.placing then
   local elapsed=math.max(0,now-(A.demoStart or now))/1000
   -- Placement preview deliberately loops until the test mode is toggled off.
