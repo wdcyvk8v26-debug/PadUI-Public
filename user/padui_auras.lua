@@ -150,14 +150,11 @@ function A:update()
    menuPreviewSeconds=duration-elapsed
   end
  end
- -- Hide the native container completely while there are no aura tiles.
- -- Remember only automatic hiding so a manually hidden window stays hidden.
- if #entries==0 and not A.placing and not menuPreviewSeconds then
-  if window.active then A.autoHidden=true;window.active=false end
- elseif A.autoHidden then
-  window.active=true
-  A.autoHidden=false
- end
+ -- Enabled state is separate from transient window visibility.
+ -- When enabled, real warnings or previews are always shown; otherwise the
+ -- container stays hidden without disabling PadAuras itself.
+ local shouldShow=#entries>0 or A.placing or menuPreviewSeconds~=nil
+ if window.active~=shouldShow then window.active=shouldShow end
  if A.placing then
   local elapsed=math.max(0,now-(A.demoStart or now))/1000
   -- Placement preview deliberately loops until the test mode is toggled off.
