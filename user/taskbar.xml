@@ -1055,7 +1055,25 @@
 			pushflag="UI:VARIABLES:ISACTIVE:INVENTORY" win_name="inventory" />
         <instance template="win_button" id="inventory_compact" color="UI:SAVE:WIN:COLORS:INV" text="PadUI Bag" posparent="invent" posref="BL TL" x="0" y="-4" pushflag="UI:VARIABLES:ISACTIVE:INVENTORY_COMPACT" win_name="inventory_compact" />
         <instance template="win_button" id="padui_items" color="UI:SAVE:WIN:COLORS:INV" text="PadUI Item bar" posparent="inventory_compact" posref="BL TL" x="0" y="-4" pushflag="UI:VARIABLES:ISACTIVE:PADUI_ITEMS" win_name="padui_items" />
-<instance template="win_button" id="padui_auras" color="UI:SAVE:WIN:COLORS:INV" text="PadAuras" posparent="padui_items" posref="BL TL" x="0" y="-4" pushflag="UI:VARIABLES:ISACTIVE:PADUI_AURAS" win_name="padui_auras" />
+<group id="padui_auras" sizeref="w" w="0" h="14" x="0" y="-4" posref="BL TL" posparent="padui_items">
+			<ctrl type="button" id="but" button_type="toggle_button" x="8" y="0" posref="ML ML"
+				tx_normal="W_slot_on.tga" tx_pushed="W_opacity_on.tga"
+				color="UI:SAVE:WIN:COLORS:INV" col_pushed="UI:SAVE:WIN:COLORS:INV" col_over="UI:SAVE:WIN:COLORS:INV"
+				global_color_normal="false" global_color_over="false" global_color_pushed="false" />
+			<view type="text" id="text" posparent="but" posref="MR ML" x="4" y="-3" fontsize="11" global_color="false"
+				color="UI:SAVE:WIN:COLORS:INV" shadow="true" hardtext="PadAuras" />
+			<view type="text" id="key" posref="MR MR" x="-8" y="-2" fontsize="8" global_color="false"
+				color="UI:SAVE:WIN:COLORS:INV" shadow="true" hardtext="uiNotAssigned" />
+			<ctrl type="button" id="over" posref="TL TL" sizeref="w" w="0" h="14" button_type="push_button" scale="true" render_layer="2"
+				tx_normal="blank.tga" tx_pushed="blank.tga" tx_over="blank.tga"
+				color="0 0 0 0" col_pushed="0 0 0 0" col_over="255 255 255 24"
+				global_color_normal="false" global_color_pushed="false" global_color_over="false"
+				onclick_l="lua" params_l="PadUIAuras:menuToggle()" />
+			<link expr="@UI:VARIABLES:ISACTIVE:PADUI_AURAS" target="but:pushed" />
+			<link expr="ifthenelse(eq(@UI:VARIABLES:ISACTIVE:PADUI_AURAS,1), makeRGB(255,255,255), intToColor(@UI:SAVE:WIN:COLORS:INV))"
+				target="text:color_rgba,key:color_rgba" />
+			<link expr="intToColor(@UI:SAVE:WIN:COLORS:INV)" target="but:col_normal_rgba,but:col_over_rgba,but:col_pushed_rgba" />
+		</group>
 
 		<instance template="win_button" id="padui_settings" color="UI:SAVE:WIN:COLORS:INV" text="PadUI Settings" posparent="padui_auras" posref="BL TL" x="0" y="-4" pushflag="UI:VARIABLES:ISACTIVE:PADUI_SETTINGS" win_name="padui_settings" />
         <instance template="win_button" id="padui_timers" color="UI:SAVE:WIN:COLORS:INV" text="PadUI Timers" posparent="padui_settings" posref="BL TL" x="0" y="-4" pushflag="UI:VARIABLES:ISACTIVE:PADUI_TIMERS" win_name="padui_timers" />
@@ -1065,6 +1083,9 @@
 
 		<instance template="win_button" id="links" color="UI:SAVE:WIN:COLORS:INV" text="uiLinksTitle" posparent="action_book" posref="BL TL" x="0" y="-4"
 			pushflag="UI:VARIABLES:ISACTIVE:LINKS" win_name="links" />
+
+		<instance template="win_button" id="defense" color="UI:SAVE:WIN:COLORS:INV" text="uiDefenseTitle" posparent="links" posref="BL TL" x="0" y="-4"
+			pushflag="UI:VARIABLES:ISACTIVE:DEFENSE" win_name="defense" />
 
 	</group>
 	<view type="bitmap" id="inv_ico_back" posparent="inventory" posref="TL TL" x="-22" y="22" texture="W_slot_categorie.tga" global_color="false" />

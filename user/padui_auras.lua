@@ -43,21 +43,41 @@ function A:tickNow()
  -- Smooth clock: 100 units per game cycle, 1000 units per second.
  return smooth>0 and math.max(current,smooth/100) or current
 end
+function A:beginPreview()
+ A.placing=true
+ A.demoStart=nltime.getLocalTime()
+ A.demoSheet=0
+ for i=0,11 do
+  local sheet=db('SERVER:MODIFIERS:BONUS:'..i..':SHEET')
+  if sheet~=0 then A.demoSheet=sheet;break end
+ end
+ if A.demoSheet==0 then A.demoSheet=getSheetId('mod_dodge_success.sbrick') end
+end
 function A:test()
  if not game or not game.InGameDbInitialized then return end
- A.placing=not A.placing
+ if A.placing then A.placing=false else A:beginPreview() end
  if A.placing then
-  A.demoStart=nltime.getLocalTime()
-  A.demoSheet=0
-  for i=0,11 do
-   local sheet=db('SERVER:MODIFIERS:BONUS:'..i..':SHEET')
-   if sheet~=0 then A.demoSheet=sheet;break end
-  end
-  if A.demoSheet==0 then A.demoSheet=getSheetId('mod_dodge_success.sbrick') end
   local window=getUI(ROOT)
   if window then window.active=true end
   runAH(nil,'set','target_property='..ROOT..':opened|value=1')
  end
+ A:update()
+end
+function A:menuToggle()
+ if not game or not game.InGameDbInitialized then return end
+ local window=getUI(ROOT)
+ if not window then return end
+ if window.active then
+  A.placing=false
+  A.autoHidden=false
+  window.active=false
+  return
+ end
+ local entries=A:collect(A:tickNow())
+ A.autoHidden=false
+ if #entries==0 then A:beginPreview() else A.placing=false end
+ window.active=true
+ runAH(nil,'set','target_property='..ROOT..':opened|value=1')
  A:update()
 end
 function A:resetPosition()
