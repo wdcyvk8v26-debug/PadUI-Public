@@ -4,6 +4,7 @@ PadUIAuras = PadUIAuras or {}
 local A=PadUIAuras
 local ROOT='ui:interface:padui_auras'
 local TEMP='UI:VARIABLES:PADUI:AURAS:'
+local SAVE='UI:SAVE:PADUI:AURAS:'
 local words={
  de={test='Test',tip='Testanzeige für 5 Sekunden. Testkachel am Hintergrund ziehen.',bonus='Buff läuft aus',malus='Debuff läuft aus',demo='Testanzeige',position='Position in den sichtbaren Bereich zurücksetzen'},
  en={test='Test',tip='Show a 5-second preview. Drag the preview tile background.',bonus='Buff expires',malus='Debuff expires',demo='Preview',position='Reset position to the visible area'},
@@ -43,6 +44,36 @@ function A:tickNow()
  -- Smooth clock: 100 units per game cycle, 1000 units per second.
  return smooth>0 and math.max(current,smooth/100) or current
 end
+function A:isEnabled()
+ return db(SAVE..'ENABLED')~=0
+end
+function A:setEnabled(enabled,preview)
+ enabled=enabled and true or false
+ setDbProp(SAVE..'ENABLED',enabled and 1 or 0)
+ A.placing=false
+ A.menuPreview=false
+ A.autoHidden=false
+ local window=getUI(ROOT)
+ if not enabled then
+  if window then window.active=false end
+  setDbProp('UI:VARIABLES:ISACTIVE:PADUI_AURAS',0)
+  return
+ end
+ if preview then
+  A:beginPreview()
+  A.placing=false
+  A.menuPreview=true
+  A.menuPreviewStart=A.demoStart
+ end
+ if window then
+  window.active=true
+  runAH(nil,'set','target_property='..ROOT..':opened|value=1')
+ end
+ A:update()
+end
+function A:toggleEnabled()
+ A:setEnabled(not A:isEnabled(),true)
+end
 function A:beginPreview()
  A.placing=true
  A.demoStart=nltime.getLocalTime()
@@ -55,6 +86,7 @@ function A:beginPreview()
 end
 function A:test()
  if not game or not game.InGameDbInitialized then return end
+ if not A:isEnabled() then setDbProp(SAVE..'ENABLED',1) end
  A.menuPreview=false
  if A.placing then A.placing=false else A:beginPreview() end
  if A.placing then
@@ -66,31 +98,10 @@ function A:test()
 end
 function A:menuToggle()
  if not game or not game.InGameDbInitialized then return end
- local window=getUI(ROOT)
- if not window then return end
- if window.active then
-  A.placing=false
-  A.menuPreview=false
-  A.autoHidden=false
-  window.active=false
-  return
- end
- local entries=A:collect(A:tickNow())
- A.autoHidden=false
- if #entries==0 then
-  A:beginPreview()
-  A.placing=false
-  A.menuPreview=true
-  A.menuPreviewStart=A.demoStart
- else
-  A.placing=false
-  A.menuPreview=false
- end
- window.active=true
- runAH(nil,'set','target_property='..ROOT..':opened|value=1')
- A:update()
+ A:toggleEnabled()
 end
 function A:resetPosition()
+ setDbProp(SAVE..'ENABLED',1)
  local window=getUI(ROOT)
  if not window then return end
  local width,height=getWindowSize()
@@ -116,6 +127,14 @@ function A:update()
  local window=getUI(ROOT)
  local header=getUI(ROOT..':header_opened')
  if not window or not header then return end
+ if not A:isEnabled() then
+  A.placing=false
+  A.menuPreview=false
+  A.autoHidden=false
+  if window.active then window.active=false end
+  setDbProp('UI:VARIABLES:ISACTIVE:PADUI_AURAS',0)
+  return
+ end
  if db('UI:SAVE:PADUI:AURAS:PLACED_012')==0 then A:resetPosition() end
  setDbProp('UI:VARIABLES:ISACTIVE:PADUI_AURAS',window.active and 1 or 0)
  local tick=A:tickNow()
@@ -186,7 +205,6 @@ function A:update()
 end
 
 -- Settings/catalog are saved per character, independently of alert slot order.
-local SAVE='UI:SAVE:PADUI:AURAS:'
 local MODAL='ui:interface:padui_settings:content:page2'
 local PICK='UI:VARIABLES:PADUI:AURAS_PICK:'
 local TIMES={3,5,10,15,30}
