@@ -13,6 +13,7 @@
   <lua file="padui_items.lua" />
 <lua file="padui_auras.lua" />
 <variable entry="UI:SAVE:PADUI:AURAS:PLACED_012" type="sint32" value="0" />
+<variable entry="UI:SAVE:PADUI:AURAS:ENABLED" type="sint32" value="1" />
 <variable entry="UI:VARIABLES:ISACTIVE:PADUI_AURAS" type="sint32" value="0" />
 <variable entry="UI:VARIABLES:PADUI:AURAS:$i:SHEET" type="sint32" value="0" size="25" />
 

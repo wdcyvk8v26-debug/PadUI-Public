@@ -171,6 +171,11 @@ S.windows={
 }
 function S:toggleWindow(index)
  local spec=S.windows[tonumber(index) or 0];if not spec then return end
+ if spec[1]=='padui_auras' and PadUIAuras then
+  PadUIAuras:toggleEnabled()
+  S:refresh()
+  return
+ end
  local w=getUI('ui:interface:'..spec[1]);if not w then return end
  w.active=not w.active
  setDbProp('UI:VARIABLES:ISACTIVE:'..spec[2],w.active and 1 or 0)
@@ -226,7 +231,8 @@ function S:refresh()
  pl(1,'visibility_text',t.visibility);pl(1,'self_text',t.self);pl(1,'sort_text',t.sort)
  for i,spec in ipairs(S.windows) do
   local w=getUI('ui:interface:'..spec[1])
-  pl(1,'window'..i..'_text',(w and w.active and '[x] ' or '[ ] ')..t[spec[3]])
+  local checked=(spec[1]=='padui_auras' and PadUIAuras and PadUIAuras:isEnabled()) or (w and w.active)
+  pl(1,'window'..i..'_text',(checked and '[x] ' or '[ ] ')..t[spec[3]])
  end
  pl(1,'self_button_text',RyzomTeamUI and RyzomTeamUI:showSelf() and t.on or t.off)
  local mode=RyzomTeamUI and RyzomTeamUI:sortMode() or 0
