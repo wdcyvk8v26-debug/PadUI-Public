@@ -55,6 +55,7 @@ function A:beginPreview()
 end
 function A:test()
  if not game or not game.InGameDbInitialized then return end
+ A.menuPreview=false
  if A.placing then A.placing=false else A:beginPreview() end
  if A.placing then
   local window=getUI(ROOT)
@@ -69,13 +70,22 @@ function A:menuToggle()
  if not window then return end
  if window.active then
   A.placing=false
+  A.menuPreview=false
   A.autoHidden=false
   window.active=false
   return
  end
  local entries=A:collect(A:tickNow())
  A.autoHidden=false
- if #entries==0 then A:beginPreview() else A.placing=false end
+ if #entries==0 then
+  A:beginPreview()
+  A.placing=false
+  A.menuPreview=true
+  A.menuPreviewStart=A.demoStart
+ else
+  A.placing=false
+  A.menuPreview=false
+ end
  window.active=true
  runAH(nil,'set','target_property='..ROOT..':opened|value=1')
  A:update()
@@ -110,19 +120,32 @@ function A:update()
  setDbProp('UI:VARIABLES:ISACTIVE:PADUI_AURAS',window.active and 1 or 0)
  local tick=A:tickNow()
  local entries=A:collect(tick)
+ local duration=A:warningSeconds()
+ local now=nltime.getLocalTime()
+ local menuPreviewSeconds=nil
+ if A.menuPreview then
+  local elapsed=math.max(0,now-(A.menuPreviewStart or now))/1000
+  if elapsed>=duration then
+   A.menuPreview=false
+  else
+   menuPreviewSeconds=duration-elapsed
+  end
+ end
  -- Hide the native container completely while there are no aura tiles.
  -- Remember only automatic hiding so a manually hidden window stays hidden.
- if #entries==0 and not A.placing then
+ if #entries==0 and not A.placing and not menuPreviewSeconds then
   if window.active then A.autoHidden=true;window.active=false end
  elseif A.autoHidden then
   window.active=true
   A.autoHidden=false
  end
  if A.placing then
-  local duration=A:warningSeconds()
-  local elapsed=math.max(0,nltime.getLocalTime()-(A.demoStart or nltime.getLocalTime()))/1000
-  -- Preview stays in the first slot so real effects cannot move the drag target.
+  local elapsed=math.max(0,now-(A.demoStart or now))/1000
+  -- Placement preview deliberately loops until the test mode is toggled off.
   table.insert(entries,1,{sheet=A.demoSheet,seconds=duration-(elapsed%duration),kind='demo'})
+ elseif menuPreviewSeconds then
+  -- Window-registry preview is one-shot and disappears after the warning time.
+  table.insert(entries,1,{sheet=A.demoSheet,seconds=menuPreviewSeconds,kind='demo'})
  end
  local text,lang=A:texts()
  local page=getUI('ui:interface:padui_settings:content:page2')
