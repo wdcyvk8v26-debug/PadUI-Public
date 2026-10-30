@@ -16,7 +16,7 @@ function getDbProp(path)return db[path] end
 function getUI(path)return gui[path] end
 function isPlayerReady()return ready end
 function getWindowSize()return 1920,1080 end
-dofile('user/padui_low_health.lua')
+dofile('user/padui_settings.lua')
 local h=PadUILowHealth
 local function tick(time,hp,force)
  now=time;db[HP]=hp
