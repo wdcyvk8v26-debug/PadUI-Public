@@ -12,6 +12,10 @@ local function db(path)
     local ok,value=pcall(getDbProp,path)
     return ok and tonumber(value) or nil
 end
+-- Native UI property writes may trigger layout even when the value is unchanged.
+local function writeChanged(node,key,value)
+    if node and node[key]~=value then node[key]=value end
+end
 
 local function validSlot(value)
     return value and value==math.floor(value) and value>=0 and value<255
@@ -91,11 +95,11 @@ function D:update()
     local window = getUI(ROOT)
     local header = getUI(ROOT .. ":header_opened")
     local tags = getUI(ROOT .. ":pvp_tags")
-    if header then header.h = 40 end
+    writeChanged(header,'h',40)
     local back=getUI(ROOT..':header_opened:compact_back')
-    if back then back.h=40 end
-    if tags then tags.y=-56 end
-    if window then window.h = 56 + ((tags and tags.active) and 24 or 0) end
+    writeChanged(back,'h',40)
+    writeChanged(tags,'y',-56)
+    writeChanged(window,'h',56 + ((tags and tags.active) and 24 or 0))
     -- Optional target-of-target must not stop the native target/distance update.
     if not D.targetOfTargetFailed then
         local ok,err=pcall(D.updateTargetOfTarget,D)
@@ -114,30 +118,30 @@ function D:update()
     if name then
         local text = tostring(getTargetName() or "")
         text = text:gsub("@%b{}", ""):gsub("%s*%(.*$", "")
-        name.hardtext = text
+        writeChanged(name,'hardtext',text)
     end
     local title = getUI(ROOT .. ":header_opened:target_title")
-    if title then title.active = false end
+    writeChanged(title,'active',false)
     local label = getUI(ROOT .. ":header_opened:target_distance")
     if not label then return end
     if isPlayerReady and not isPlayerReady() then
-        label.hardtext = "-- m"
+        writeChanged(label,'hardtext',"-- m")
         return
     end
     local px, py = getPlayerPos()
     local tx, ty = getTargetPos()
     if type(px) ~= "number" or type(py) ~= "number"
         or type(tx) ~= "number" or type(ty) ~= "number" then
-        label.hardtext = "-- m"
+        writeChanged(label,'hardtext',"-- m")
         return
     end
     local dx, dy = px - tx, py - ty
     local distance = math.sqrt(dx * dx + dy * dy)
     if distance ~= distance or distance == math.huge then
-        label.hardtext = "-- m"
+        writeChanged(label,'hardtext',"-- m")
         return
     end
-    label.hardtext = tostring(math.floor(distance + 0.5)) .. " m"
+    writeChanged(label,'hardtext',tostring(math.floor(distance + 0.5)) .. " m")
 end
 
 function D:start()

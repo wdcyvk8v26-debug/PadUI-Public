@@ -5,9 +5,9 @@ local ROOT='ui:interface:padui_settings'
 local SAVE='UI:SAVE:PADUI:'
 local COLORS={'110 235 225','120 185 255','190 145 255','255 185 100','255 145 180','170 225 120'}
 local words={
- de={title='PadUI Einstellungen',appearance='Darstellung',layout='Anordnung',timer_scale='Timergröße (Miniansicht)',team_scale='Teamgröße',team_layout='Teamfenster',item_layout='Itemleiste',vertical='Vertikal',horizontal='Horizontal',automatic='Automatisch',layout_note='Team horizontal: 5 Spalten, in kleinen Fenstern 3×3. Itemleiste bricht bei Platzmangel um.',windows='Fenster',auras='PadAuras',accent='Akzentfarbe',name='Charakter im Kopf anzeigen',transparency='Transparenz',font='Schrift der kompakten Anzeigen',language='Sprache',saved='Wird pro Charakter sofort gespeichert.',normal='Standard',small='Kleiner',large='Größer',on='An',off='Aus',defaults='Darstellung zurücksetzen',close='Schließen',timers='Timer',team='Team',inventory='Tascheninfo',items='Itemleiste',player='Spieler',target='Ziel',warning='Warnung vor Ablauf',mode='Überwachte Effekte',both='Buffs + Debuffs',buffs='Nur Buffs',debuffs='Nur Debuffs',filters='Einzelne Effekte auswählen',test='Test / Platzieren',stop_test='Test beenden',position='Position zurücksetzen',aura_defaults='Zurücksetzen',placement='Test starten; Kachel am Hintergrund ziehen.',effects='Erkannte Effekte — Klick zum Überwachen',visibility='Anzeigen / Ausblenden',self='Eigenen Charakter im Team',sort='Teamsortierung',sort_name='Name',sort_hp='HP',sort_missing='Fehlende HP',semantic='Balken- und Warnfarben bleiben unverändert.',colors={'Türkis','Blau','Violett','Orange','Rosa','Grün'}},
- en={title='PadUI Settings',appearance='Appearance',layout='Layout',timer_scale='Timer size (compact)',team_scale='Team size',team_layout='Team window',item_layout='Item bar',vertical='Vertical',horizontal='Horizontal',automatic='Automatic',layout_note='Horizontal team: 5 columns, 3×3 in small windows. Item bar wraps if space is limited.',windows='Windows',auras='PadAuras',accent='Accent colour',name='Show character in header',transparency='Transparency',font='Compact display text',language='Language',saved='Changes are saved immediately per character.',normal='Default',small='Smaller',large='Larger',on='On',off='Off',defaults='Reset appearance',close='Close',timers='Timer',team='Team',inventory='Bag info',items='Item bar',player='Player',target='Target',warning='Warning before expiry',mode='Monitored effects',both='Buffs + debuffs',buffs='Buffs only',debuffs='Debuffs only',filters='Choose individual effects',test='Test / Position',stop_test='Stop preview',position='Reset position',aura_defaults='Reset',placement='Start preview; drag the tile background.',effects='Observed effects — click to monitor',visibility='Show / Hide',self='Own character in team',sort='Team sorting',sort_name='Name',sort_hp='HP',sort_missing='Missing HP',semantic='Resource bars and warning colours stay unchanged.',colors={'Turquoise','Blue','Purple','Orange','Pink','Green'}},
- fr={title='Réglages PadUI',appearance='Apparence',layout='Disposition',timer_scale='Taille des minuteurs (réduits)',team_scale='Taille de l’équipe',team_layout='Fenêtre d’équipe',item_layout='Barre d’objets',vertical='Verticale',horizontal='Horizontale',automatic='Automatique',layout_note='Équipe horizontale : 5 colonnes, 3×3 en petite fenêtre. Objets : retour si nécessaire.',windows='Fenêtres',auras='PadAuras',accent='Couleur d’accent',name='Personnage dans l’en-tête',transparency='Transparence',font='Texte des affichages compacts',language='Langue',saved='Modifications enregistrées par personnage.',normal='Défaut',small='Plus petit',large='Plus grand',on='Oui',off='Non',defaults='Réinitialiser l’apparence',close='Fermer',timers='Minuteurs',team='Équipe',inventory='Infos du sac',items='Barre d’objets',player='Personnage',target='Cible',warning='Alerte avant expiration',mode='Effets surveillés',both='Bonus + malus',buffs='Bonus seuls',debuffs='Malus seuls',filters='Choisir les effets individuels',test='Test / Placer',stop_test='Arrêter le test',position='Replacer',aura_defaults='Réinitialiser',placement='Lancer le test ; déplacer par le fond.',effects='Effets observés — cliquer pour surveiller',visibility='Afficher / Masquer',self='Son personnage dans l’équipe',sort='Tri de l’équipe',sort_name='Nom',sort_hp='PV',sort_missing='PV manquants',semantic='Couleurs des jauges et alertes conservées.',colors={'Turquoise','Bleu','Violet','Orange','Rose','Vert'}}
+ de={title='PadUI Einstellungen',appearance='Darstellung',layout='Anordnung',timer_scale='Timergröße (Miniansicht)',team_scale='Teamgröße',team_layout='Teamfenster',item_layout='Itemleiste',vertical='Vertikal',horizontal='Horizontal',automatic='Automatisch',layout_note='Team horizontal: 5 Spalten, in kleinen Fenstern 3×3. Itemleiste bricht bei Platzmangel um.',windows='Fenster',auras='PadAuras',accent='Akzentfarbe',name='Charakter im Kopf anzeigen',transparency='Transparenz',font='Schrift der kompakten Anzeigen',language='Sprache',saved='Wird pro Charakter sofort gespeichert.',normal='Standard',small='Kleiner',large='Größer',on='An',off='Aus',defaults='Darstellung zurücksetzen',close='Schließen',timers='Timer',team='Team',inventory='Tascheninfo',items='Itemleiste',player='Spieler',target='Ziel',warning='Warnung vor Ablauf',mode='Überwachte Effekte',both='Buffs + Debuffs',buffs='Nur Buffs',debuffs='Nur Debuffs',filters='Einzelne Effekte auswählen',test='Test / Platzieren',stop_test='Test beenden',position='Position zurücksetzen',aura_defaults='Zurücksetzen',placement='Test starten; Kachel am Hintergrund ziehen.',effects='Erkannte Effekte — Klick zum Überwachen',visibility='Anzeigen / Ausblenden',self='Eigenen Charakter im Team',sort='Teamsortierung',sort_name='Name',sort_hp='HP',sort_missing='Fehlende HP',semantic='Balken- und Warnfarben bleiben unverändert.',lowhp='Wenig HP: roter Bildschirmpuls',colors={'Türkis','Blau','Violett','Orange','Rosa','Grün'}},
+ en={title='PadUI Settings',appearance='Appearance',layout='Layout',timer_scale='Timer size (compact)',team_scale='Team size',team_layout='Team window',item_layout='Item bar',vertical='Vertical',horizontal='Horizontal',automatic='Automatic',layout_note='Horizontal team: 5 columns, 3×3 in small windows. Item bar wraps if space is limited.',windows='Windows',auras='PadAuras',accent='Accent colour',name='Show character in header',transparency='Transparency',font='Compact display text',language='Language',saved='Changes are saved immediately per character.',normal='Default',small='Smaller',large='Larger',on='On',off='Off',defaults='Reset appearance',close='Close',timers='Timer',team='Team',inventory='Bag info',items='Item bar',player='Player',target='Target',warning='Warning before expiry',mode='Monitored effects',both='Buffs + debuffs',buffs='Buffs only',debuffs='Debuffs only',filters='Choose individual effects',test='Test / Position',stop_test='Stop preview',position='Reset position',aura_defaults='Reset',placement='Start preview; drag the tile background.',effects='Observed effects — click to monitor',visibility='Show / Hide',self='Own character in team',sort='Team sorting',sort_name='Name',sort_hp='HP',sort_missing='Missing HP',semantic='Resource bars and warning colours stay unchanged.',lowhp='Low HP: red screen pulse',colors={'Turquoise','Blue','Purple','Orange','Pink','Green'}},
+ fr={title='Réglages PadUI',appearance='Apparence',layout='Disposition',timer_scale='Taille des minuteurs (réduits)',team_scale='Taille de l’équipe',team_layout='Fenêtre d’équipe',item_layout='Barre d’objets',vertical='Verticale',horizontal='Horizontale',automatic='Automatique',layout_note='Équipe horizontale : 5 colonnes, 3×3 en petite fenêtre. Objets : retour si nécessaire.',windows='Fenêtres',auras='PadAuras',accent='Couleur d’accent',name='Personnage dans l’en-tête',transparency='Transparence',font='Texte des affichages compacts',language='Langue',saved='Modifications enregistrées par personnage.',normal='Défaut',small='Plus petit',large='Plus grand',on='Oui',off='Non',defaults='Réinitialiser l’apparence',close='Fermer',timers='Minuteurs',team='Équipe',inventory='Infos du sac',items='Barre d’objets',player='Personnage',target='Cible',warning='Alerte avant expiration',mode='Effets surveillés',both='Bonus + malus',buffs='Bonus seuls',debuffs='Malus seuls',filters='Choisir les effets individuels',test='Test / Placer',stop_test='Arrêter le test',position='Replacer',aura_defaults='Réinitialiser',placement='Lancer le test ; déplacer par le fond.',effects='Effets observés — cliquer pour surveiller',visibility='Afficher / Masquer',self='Son personnage dans l’équipe',sort='Tri de l’équipe',sort_name='Nom',sort_hp='PV',sort_missing='PV manquants',semantic='Couleurs des jauges et alertes conservées.',lowhp='PV bas : pulsation rouge',colors={'Turquoise','Bleu','Violet','Orange','Rose','Vert'}}
 }
 local function db(key) return tonumber(getDbProp(SAVE..key)) or 0 end
 local function node(path) return getUI(ROOT..path) end
@@ -186,6 +186,19 @@ function S:toggleSelf()
  if RyzomTeamUI then RyzomTeamUI:toggleSelf() end
  S:refresh()
 end
+-- Independent presentation options: never invoke the global native-alpha setter.
+function S:toggleLowHP()
+ local key=SAVE..'LOW_HP:ENABLED'
+ setDbProp(key,(tonumber(getDbProp(key)) or 0)==1 and 0 or 1)
+ if PadUILowHealth then PadUILowHealth:update(true) end
+ S:refresh()
+end
+function S:setLowHPThreshold(value)
+ if value~=15 and value~=25 and value~=35 then return end
+ setDbProp(SAVE..'LOW_HP:THRESHOLD',value)
+ if PadUILowHealth then PadUILowHealth:update(true) end
+ S:refresh()
+end
 function S:sort(mode)
  if mode~='name' and mode~='hp' and mode~='missing' then return end
  if RyzomTeamUI then RyzomTeamUI:setSort(mode) end
@@ -235,6 +248,13 @@ function S:refresh()
   pl(1,'window'..i..'_text',(checked and '[x] ' or '[ ] ')..t[spec[3]])
  end
  pl(1,'self_button_text',RyzomTeamUI and RyzomTeamUI:showSelf() and t.on or t.off)
+ pl(1,'lowhp_title',t.lowhp)
+ local lowOn=(tonumber(getDbProp(SAVE..'LOW_HP:ENABLED')) or 0)==1
+ pl(1,'lowhp_toggle_text',(lowOn and '[x] ' or '[ ] ')..(lowOn and t.on or t.off))
+ local hpLimit=tonumber(getDbProp(SAVE..'LOW_HP:THRESHOLD')) or 25
+ for _,value in ipairs({15,25,35}) do
+  pl(1,'lowhp_'..value..'_text',(hpLimit==value and '[x] ' or '')..value..'%')
+ end
  local mode=RyzomTeamUI and RyzomTeamUI:sortMode() or 0
  mode=({[0]='name',[1]='hp',[2]='missing'})[mode] or 'name'
  for _,key in ipairs({'name','hp','missing'}) do pl(1,'sort_'..key..'_text',(mode==key and '[x] ' or '')..t['sort_'..key]) end
@@ -281,4 +301,82 @@ end
 function S:start()
  S.nativeWindowAlpha={}
  S.startupRetries=3;S.lastTick=nil;S:apply(true);S:refresh()
+end
+
+-- Bundled here because existing installations link individual Lua files.
+-- A separate <lua file="padui_low_health.lua" /> would be missing at login.
+do
+-- PadUI low-health screen tint. XML/Lua only; no input controls or native window changes.
+-- Lua 5.1 compatible. The overlay contains a single non-interactive bitmap.
+PadUILowHealth = PadUILowHealth or {}
+local H = PadUILowHealth
+local ROOT = 'ui:interface:padui_low_hp_overlay'
+local ENABLED = 'UI:SAVE:PADUI:LOW_HP:ENABLED'
+local THRESHOLD = 'UI:SAVE:PADUI:LOW_HP:THRESHOLD'
+local HP = 'UI:VARIABLES:USER:HP_RATIO'
+
+local function read(path)
+ local ok,value=pcall(getDbProp,path)
+ return ok and tonumber(value) or nil
+end
+local function put(node,key,value)
+ if node and node[key]~=value then node[key]=value end
+end
+
+function H:limit()
+ local v=read(THRESHOLD)
+ return (v==15 or v==25 or v==35) and v or 25
+end
+function H:hide(reset)
+ local group=getUI(ROOT,false)
+ put(group,'active',false)
+ H.warning=false
+ if reset then H.seenHP=false;H.lastTime=nil end
+end
+function H:update(force)
+ if not game or not game.InGameDbInitialized or (isPlayerReady and not isPlayerReady()) then
+  H:hide(true)
+  return
+ end
+ local now=nltime.getLocalTime()
+ if not force and H.lastTime and now>=H.lastTime and now-H.lastTime<200 then return end
+ H.lastTime=now
+ if read(ENABLED)~=1 then H:hide();return end
+ local ratio=read(HP)
+ if not ratio or ratio<0 or ratio>1024 then H:hide();return end
+ -- DB initialization may expose zero HP before the character is actually ready.
+ if ratio>0 then H.seenHP=true end
+ if not H.seenHP then H:hide();return end
+ local threshold=H:limit()
+ if H.warning then
+  if ratio*100 >= (threshold+5)*1024 then H.warning=false end
+ elseif ratio*100 <= threshold*1024 then
+  H.warning=true
+ end
+ if not H.warning then H:hide();return end
+ local group=getUI(ROOT,false)
+ if not group then return end
+ local tint=getUI(ROOT..':tint',false)
+ if not tint then return end
+ local width,height=getWindowSize()
+ width=tonumber(width);height=tonumber(height)
+ if not width or not height or width<1 or height<1 then H:hide();return end
+ width=math.floor(width);height=math.floor(height)
+ put(group,'w',width);put(group,'h',height)
+ put(tint,'w',width);put(tint,'h',height)
+ -- Gentle 1.6 s triangular pulse instead of a hard blink.
+ local wave=(now%1600)/800
+ if wave>1 then wave=2-wave end
+ local critical=ratio*100 <= 15*1024
+ local base=critical and 22 or 12
+ local range=critical and 30 or 24
+ local alpha=math.floor(base+range*wave+0.5)
+ put(tint,'color','185 15 15 '..alpha)
+ put(group,'active',true)
+end
+function H:start()
+ H.warning=false;H.seenHP=false;H.lastTime=nil
+ H:update(true)
+end
+
 end

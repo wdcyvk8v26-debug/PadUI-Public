@@ -163,8 +163,9 @@ function P:start()
  P.Settings = PadUISettings
  P.Timers = PadUITimers
  P.Mobs = PadUIMobs
+ P.LowHealth = PadUILowHealth
  -- One failed window initializer must not prevent the others from starting.
- for _,name in ipairs({"Skill","Items","Auras","Settings","Timers","Mobs"}) do
+ for _,name in ipairs({"Skill","Items","Auras","Settings","Timers","Mobs","LowHealth"}) do
   local module=P[name]
   if module then
    local ok,err=pcall(function() module:start() end)
