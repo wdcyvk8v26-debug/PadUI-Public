@@ -32,7 +32,7 @@ tick(630,256);shown(true)
 assert(gui[root].w==1920 and gui[root..':tint'].h==1080)
 -- Five-point hysteresis: keep warning at 28%, clear at 30%.
 tick(840,287);shown(true)
-tick(1050,307);shown(false)
+tick(1050,308);shown(false)
 tick(1260,286);shown(false)
 tick(1470,255);shown(true)
 -- Changing the threshold should be reflected immediately.
