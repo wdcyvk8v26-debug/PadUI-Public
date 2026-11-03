@@ -51,17 +51,29 @@ assert any(link.get("target") == "padui_settings_shortcut:active"
                and link.get("expr") == "eq(@UI:SAVE:PADUI:HIDE_MINIMAP_ICON,0)"
                for link in window.findall("./link"))
 
-# Layout settings toggle is independent of the compass icon itself,
-# so the user can re-enable the icon after hiding it.
+# The independent toggle belongs in the Windows tab, NOT the team/layout
+# section (which dynamically creates the native team controls).
+# It remains accessible even if the minimap icon itself is hidden.
 settings = interaction.find("./group[@id='padui_settings']")
 assert settings is not None
+windows = settings.find("./group[@id='content']/group[@id='page1']")
 layout = settings.find("./group[@id='content']/group[@id='page3']")
-assert layout is not None
-toggle = layout.find("./ctrl[@id='minimap_icon']")
+assert windows is not None and layout is not None
+toggle = windows.find("./ctrl[@id='minimap_icon']")
 assert toggle is not None
 assert toggle.get("onclick_l") == "lua"
 assert toggle.get("params_l") == "PadUISettings:toggleMinimapIcon()"
-assert layout.find("./view[@id='minimap_icon_text']") is not None
+assert (toggle.get("x"), toggle.get("y")) == ("171", "-132")
+assert (toggle.get("w"), toggle.get("h")) == ("164", "30")
+assert windows.find("./view[@id='minimap_icon_text']") is not None
+assert layout.find("./ctrl[@id='minimap_icon']") is None
+assert layout.find("./view[@id='minimap_icon_text']") is None
+window7 = windows.find("./ctrl[@id='window7']")
+assert window7 is not None
+assert window7.get("x") == "0" and window7.get("y") == toggle.get("y")
+assert int(window7.get("x")) + int(window7.get("w")) <= int(toggle.get("x"))
+assert "pl(1,'minimap_icon_text'" in settings_lua
+assert "pl(3,'minimap_icon_text'" not in settings_lua
 assert "function S:toggleMinimapIcon()" in settings_lua
 assert "db('HIDE_MINIMAP_ICON')==1 and 0 or 1" in settings_lua
 assert "if key=='HIDE_MINIMAP_ICON' then S:refresh();return end" in settings_lua
@@ -71,5 +83,7 @@ for label in (
     "Afficher l’icône PadUI sur la mini-carte",
 ):
     assert label in settings_lua
+for short_label in ("Minimap: PadUI-Icon", "Minimap: PadUI icon", "Mini-carte : PadUI"):
+    assert short_label in settings_lua
 
-print("PASS: PadUI compass button is 12px, right-aligned and visibility-toggleable")
+print("PASS: PadUI compass button 12px, independent Windows-tab visibility toggle")
