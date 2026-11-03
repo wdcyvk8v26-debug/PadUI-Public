@@ -17,12 +17,12 @@ buttons = window.findall("./group[@id='padui_settings_shortcut']")
 assert len(buttons) == 1
 button = buttons[0]
 
-# 12x12 shortcut sits at the compass right edge, vertically below Help.
+# 12x12 shortcut sits in the clear upper-right gap above the radar circle.
 assert button.get("group_onclick_l") == "show_hide"
 assert button.get("group_params_l") == "padui_settings"
 assert button.get("tooltip") == "PadUI"
 assert button.get("posref") == "TR TR"
-assert (button.get("x"), button.get("y")) == ("-4", "-48")
+assert (button.get("x"), button.get("y")) == ("-29", "-8")
 assert (button.get("w"), button.get("h")) == ("12", "12")
 assert button.find("./view[@id='back'][@type='bitmap']").get("w") == "12"
 assert button.find("./view[@id='symbol'][@type='text']").get("fontsize") == "8"
@@ -30,8 +30,17 @@ assert button.find("./view[@id='symbol'][@type='text']").get("fontsize") == "8"
 help_icon = window.find("./group[@id='help']")
 assert help_icon is not None
 assert help_icon.get("posref") == "TR TR"
-assert button.get("x") == help_icon.get("x")
-assert abs(int(button.get("y")) - int(help_icon.get("y"))) >= int(help_icon.get("h"))
+# Rectangles do not collide with Help and the button stays in the top band.
+compass_width = int(window.get("w"))
+def right_anchored_bounds(group):
+    x_right = compass_width + int(group.get("x"))
+    y_top = abs(int(group.get("y")))
+    return (x_right - int(group.get("w")), y_top,
+            x_right, y_top + int(group.get("h")))
+bx1, by1, bx2, by2 = right_anchored_bounds(button)
+hx1, hy1, hx2, hy2 = right_anchored_bounds(help_icon)
+assert bx1 >= 138 and bx2 <= 160 and by1 < 15
+assert bx2 <= hx1 or hx2 <= bx1 or by2 <= hy1 or hy2 <= by1
 assert window.find("./group[@id='visuel']/view[@id='radar']") is not None
 assert window.find("./group[@id='map']") is not None
 
