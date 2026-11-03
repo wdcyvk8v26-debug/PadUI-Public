@@ -1,9 +1,7 @@
-"""Regression checks for the compass PadUI settings shortcut.
+"""Static regression tests for the PadUI shortcut beside the Ryzom minimap.
 
-Run from the repository root:
-    python tests/test_compass_padui_settings.py
-
-Static XML validation only; verify the button and tooltip inside Ryzom.
+Run: python tests/test_compass_padui_settings.py
+XML-only checks; actual rendering and clicks must be tested in Ryzom.
 """
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -11,30 +9,58 @@ import xml.etree.ElementTree as ET
 USER = Path(__file__).resolve().parents[1] / "user"
 compass = ET.parse(USER / "compass.xml").getroot()
 interaction = ET.parse(USER / "interaction.xml").getroot()
+settings_lua = (USER / "padui_settings.lua").read_text(encoding="utf-8")
 
 window = compass.find("./group[@id='compass']")
 assert window is not None
 buttons = window.findall("./group[@id='padui_settings_shortcut']")
-assert len(buttons) == 1, "Exactly one PadUI shortcut is expected"
+assert len(buttons) == 1
 button = buttons[0]
 
-# Same native handler as the compass map icon and the taskbar window controls.
+# 12x12 shortcut sits at the compass right edge, vertically below Help.
 assert button.get("group_onclick_l") == "show_hide"
 assert button.get("group_params_l") == "padui_settings"
 assert button.get("tooltip") == "PadUI"
 assert button.get("posref") == "TR TR"
-assert int(button.get("w", "0")) == int(button.get("h", "0")) == 24
+assert (button.get("x"), button.get("y")) == ("-4", "-48")
+assert (button.get("w"), button.get("h")) == ("12", "12")
+assert button.find("./view[@id='back'][@type='bitmap']").get("w") == "12"
+assert button.find("./view[@id='symbol'][@type='text']").get("fontsize") == "8"
 
 help_icon = window.find("./group[@id='help']")
 assert help_icon is not None
 assert help_icon.get("posref") == "TR TR"
-assert button.get("y") == help_icon.get("y")
-assert abs(int(help_icon.get("x")) - int(button.get("x"))) >= 24
+assert button.get("x") == help_icon.get("x")
+assert abs(int(button.get("y")) - int(help_icon.get("y"))) >= int(help_icon.get("h"))
 assert window.find("./group[@id='visuel']/view[@id='radar']") is not None
 assert window.find("./group[@id='map']") is not None
-assert window.find("./group[@id='clock']") is not None
 
-assert button.find("./view[@id='back'][@type='bitmap']") is not None
-assert button.find("./view[@id='symbol'][@type='text']") is not None
-assert interaction.find("./group[@id='padui_settings']") is not None
-print("PASS compass PadUI settings shortcut: XML, placement, handler and target")
+# Default is visible, zero also works before the saved DB leaf is loaded.
+flag = interaction.find("./variable[@entry='UI:SAVE:PADUI:HIDE_MINIMAP_ICON']")
+assert flag is not None and flag.get("value") == "0"
+assert any(link.get("target") == "padui_settings_shortcut:active"
+               and link.get("expr") == "eq(@UI:SAVE:PADUI:HIDE_MINIMAP_ICON,0)"
+               for link in window.findall("./link"))
+
+# Layout settings toggle is independent of the compass icon itself,
+# so the user can re-enable the icon after hiding it.
+settings = interaction.find("./group[@id='padui_settings']")
+assert settings is not None
+layout = settings.find("./group[@id='content']/group[@id='page3']")
+assert layout is not None
+toggle = layout.find("./ctrl[@id='minimap_icon']")
+assert toggle is not None
+assert toggle.get("onclick_l") == "lua"
+assert toggle.get("params_l") == "PadUISettings:toggleMinimapIcon()"
+assert layout.find("./view[@id='minimap_icon_text']") is not None
+assert "function S:toggleMinimapIcon()" in settings_lua
+assert "db('HIDE_MINIMAP_ICON')==1 and 0 or 1" in settings_lua
+assert "if key=='HIDE_MINIMAP_ICON' then S:refresh();return end" in settings_lua
+for label in (
+    "PadUI-Symbol an der Minimap anzeigen",
+    "Show PadUI icon by minimap",
+    "Afficher l’icône PadUI sur la mini-carte",
+):
+    assert label in settings_lua
+
+print("PASS: PadUI compass button is 12px, right-aligned and visibility-toggleable")
