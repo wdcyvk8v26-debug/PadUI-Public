@@ -75,6 +75,15 @@ function S:set(key,value)
 end
 function S:toggleName() S:set('SHOW_NAME',db('SHOW_NAME')==1 and 0 or 1) end
 function S:toggleMinimapIcon() S:set('HIDE_MINIMAP_ICON',db('HIDE_MINIMAP_ICON')==1 and 0 or 1) end
+-- Called by the compass shortcut. Use the actual UI window rather than the
+-- generic show_hide action/group click, which may not activate this custom root.
+function S:openFromMinimap()
+ local window=getUI(ROOT,false)
+ if not window then return end
+ if not window.opened then window.opened=true end
+ if not window.active then window.active=true end
+ if setTopWindow then setTopWindow(window) end
+end
 function S:defaults()
  for _,key in ipairs({'ACCENT','SHOW_NAME','BACKGROUND_ALPHA','FONT_DELTA'}) do setDbProp(SAVE..key,0) end
  setDbProp(SAVE..'TRANSPARENCY',-1)
