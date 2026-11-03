@@ -267,17 +267,18 @@
       <view id="radar" type="radar" texture_std="w_radar_point.tga" texture_missionlist="radar_mission_16.tga" texture_missionauto="radar_mission3_16.tga" texture_missionstep="radar_mission2_16.tga" mini_texture_missionlist="radar_mission_mini_16.tga" mini_texture_missionauto="radar_mission3_mini_16.tga" mini_texture_missionstep="radar_mission2_mini_16.tga" world_size="50.0" posparent="back" posref="MM MM" w="108" h="108" y="8" global_color="false" />
     </group>
     <!-- PadUI quick access: top-right beside Help; no new texture or Lua controller. -->
-    <group id="padui_settings_shortcut" posref="TR TR" x="-32" y="-20" w="24" h="24"
+    <group id="padui_settings_shortcut" posref="TR TR" x="-4" y="-48" w="12" h="12"
            group_onclick_l="show_hide" group_params_l="padui_settings"
            tooltip="PadUI" tooltip_parent="win">
-      <view type="bitmap" id="back" posref="TL TL" w="24" h="24"
+      <view type="bitmap" id="back" posref="TL TL" w="12" h="12"
             texture="blank.tga" scale="true" global_color="false" color="35 45 53 230" />
-      <view type="bitmap" id="accent" posref="TL TL" w="24" h="2"
+      <view type="bitmap" id="accent" posref="TL TL" w="12" h="1"
             texture="blank.tga" scale="true" global_color="false" color="110 235 225 255" />
-      <view type="text" id="symbol" posref="TL TL" x="7" y="-3"
-            fontsize="14" shadow="true" global_color="false"
+      <view type="text" id="symbol" posref="TL TL" x="3" y="-1"
+            fontsize="8" shadow="true" global_color="false"
             color="110 235 225 255" hardtext="P" />
     </group>
+    <link expr="eq(@UI:SAVE:PADUI:HIDE_MINIMAP_ICON,0)" target="padui_settings_shortcut:active" />
     <ctrl type="tooltip" id="tt2" tooltip="uittCompassRange" tooltip_parent="win" posref="BM BM" x="0" y="26" w="46" h="25" />
   </group>
   <tree node="compass" />
