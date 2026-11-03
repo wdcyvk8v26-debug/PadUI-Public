@@ -268,7 +268,6 @@
     </group>
     <!-- PadUI quick access: upper right above the radar circle, in the free corner. -->
     <group id="padui_settings_shortcut" posref="TR TR" x="-29" y="-8" w="12" h="12"
-           group_onclick_l="show_hide" group_params_l="padui_settings"
            tooltip="PadUI" tooltip_parent="win">
       <view type="bitmap" id="back" posref="TL TL" w="12" h="12"
             texture="blank.tga" scale="true" global_color="false" color="35 45 53 230" />
@@ -277,6 +276,13 @@
       <view type="text" id="symbol" posref="TL TL" x="3" y="-1"
             fontsize="8" shadow="true" global_color="false"
             color="110 235 225 255" hardtext="P" />
+      <!-- Explicit button receives mouse clicks above the compass 3D scene. -->
+      <ctrl type="button" id="open_settings" button_type="push_button"
+            posref="TL TL" x="0" y="0" w="12" h="12" render_layer="6"
+            scale="true" tx_normal="blank.tga" tx_pushed="blank.tga" tx_over="blank.tga"
+            color="0 0 0 0" col_pushed="0 0 0 0" col_over="110 235 225 70"
+            tooltip="PadUI" tooltip_parent="win"
+            onclick_l="lua" params_l="PadUISettings:openFromMinimap()" />
     </group>
     <link expr="eq(@UI:SAVE:PADUI:HIDE_MINIMAP_ICON,0)" target="padui_settings_shortcut:active" />
     <ctrl type="tooltip" id="tt2" tooltip="uittCompassRange" tooltip_parent="win" posref="BM BM" x="0" y="26" w="46" h="25" />
