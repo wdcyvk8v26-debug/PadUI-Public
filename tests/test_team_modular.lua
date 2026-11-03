@@ -10,6 +10,10 @@ local ownName,sw,sh='SelfTest',1920,1080
 local mouse,px,py,mx,my,over,caller,capture=false,-1,-1,-1,-1,nil,nil,nil
 local stats={writes=0,dbWrites=0,parses=0,panels=0,unsignedReads=0,idSets=0}
 local execute=loadstring or load
+local clock=1000
+local coordCallback,writeFault
+local logs,messages={},{}
+nltime={getLocalTime=function()return clock end}
 local exported={id=true,active=true,opened=true,locked=true,movable=true,x=true,y=true,w=true,h=true,x_real=true,y_real=true,w_real=true,h_real=true,
  hardtext=true,textid=true,textid_dblink=true,color=true,tooltip=true,on_active=true,on_active_params=true,on_deactive=true,on_deactive_params=true}
 local function nativeCoords(only)
@@ -43,24 +47,34 @@ add=function(id,attrs)
  if p.locked==nil then p.locked=false end
  -- Dynamic XML stores OpenAtStart; it does NOT open the container.
  if p.type=='container' then p.opened=false;p.setup=false end
+ local obj
+ local function alive(self)
+  assert(U[id]==obj,'Stale native object: '..id)
+  assert(self==obj,'Native method received a Lua proxy: '..id)
+ end
  local methods={
   find=function(_,child)return U[id..':'..child]end,
-  addGroup=function(_,child)assert(U[child.id])end,
-  setLineMaxW=function(_,v)assert(type(v)=='number');stats.writes=stats.writes+1 end,
-  invalidateCoords=function()end,
-  updateCoords=function()
+  addGroup=function(self,child)alive(self);assert(U[child.id])end,
+  setLineMaxW=function(self,v)alive(self);assert(type(v)=='number');stats.writes=stats.writes+1 end,
+  invalidateCoords=function(self)alive(self)end,
+  updateCoords=function(self)
+   alive(self)
+   if coordCallback then coordCallback(id) end
    if p.type=='container' and p.movable and not U[id..':mover'] then add(id..':mover',{type='mover',y=-4,h=22}) end
    p.setup=true;nativeCoords(id)
   end
  }
- local obj=setmetatable({}, {
+ obj=setmetatable({}, {
   __index=function(_,k)
+   assert(U[id]==obj,'Stale native read: '..id)
    if k=='textid' then stats.unsignedReads=stats.unsignedReads+1;error('UInt32 getter triggers native STOP') end
    if methods[k] then return methods[k] end
    assert(exported[k],'Unexported property '..tostring(k)..' on '..id)
    return p[k]
   end,
   __newindex=function(_,k,v)
+   assert(U[id]==obj,'Stale native write: '..id)
+   if writeFault then writeFault(id,k,v) end
    assert(exported[k],'Unexported property '..tostring(k)..' on '..id)
    if k=='textid' then
     assert(p.type=='text_id' and p.textid_dblink=='','DB-bound text ID write')
@@ -96,9 +110,9 @@ function getMouseDown()return mouse,px,py end
 function getMousePos()return mx,my end
 function getCurrentWindowUnder()return over end
 function getUICaller()return caller end
-function debugInfo()end
-function displaySystemInfo()end
-function setOnDraw(w,s)hooks[w.id]=s end
+function debugInfo(s)logs[#logs+1]=s end
+function displaySystemInfo(s)messages[#messages+1]=s end
+function setOnDraw(w,s)assert(U[w.id]==w,'Draw hook requires native self');hooks[w.id]=s end
 function parseInterfaceFromString(s)
  assert(s:find('padui_team_member9',1,true));materialize(fixture.roots);stats.parses=stats.parses+1;return true
 end
@@ -229,7 +243,7 @@ test('all balanced layouts: 0..9 members, both directions, 1..9 tracks',function
  p=T:grid(7,1,2);assert(p[4].x==3 and p[5].y==1)
 end)
 test('nine reused native windows, explicitly opened, one frame controller',function()
- game.InGameDbInitialized=true;frame();frame()
+ game.InGameDbInitialized=true;T:start();frame();frame()
  assert(visible()==1 and stats.parses==1 and stats.panels==1)
  for _,v in ipairs(T.cards)do assert(v.window.opened and v.window.movable)end
  assert(hooks[DRIVER]=='RyzomTeamUI:update()' and hooks[LEGACY]=='')
@@ -653,6 +667,55 @@ test('changing character drops previous member identities',function()
  for k in pairs(D)do if k:sub(1,#SAVE)==SAVE then D[k]=0 end end
  R[LEGACY].active=true;game.InGameDbInitialized=true;frame();assert(visible()==1 and T.rows[1].self)
 end)
+-- Failure/lifecycle regressions: faults are injected into real runtime entry
+-- points. These mocks still cannot prove native memory safety in NeL.
+local nativeTeam='ui:interface:team_list'
+local normalTargetName=getTargetName
+local function pulse(ms,force)
+ clock=clock+(ms or 0)
+ D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']=D['UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK']+100
+ syncNames();T:update(force);nativeCoords()
+end
+local function oneFault()
+ local first=true
+ getTargetName=function()
+  if first then first=false;error('injected transient render failure') end
+  return normalTargetName()
+ end
+end
+local function healthy()
+ getTargetName=normalTargetName;coordCallback=nil;writeFault=nil
+ mouse=false;capture=nil;nativeStart=nil;over=nil
+ game.InGameDbInitialized=true
+ D[SAVE..'INIT']=1;D[SAVE..'ENABLED']=1
+ D['UI:SAVE:PADUI:HIDE_SELF']=0
+ T:retry();pulse(100);pulse(100)
+ assert(not T.failed and visible()>0,T.failed)
+ T.discardRelease=false
+end
+local function savedState()
+ local out={};for k,v in pairs(D) do if k:match('^UI:SAVE:') then out[k]=v end end
+ return out
+end
+local function sameSaved(before)
+ for k,v in pairs(before) do assert(D[k]==v,'Recovery changed saved preference '..k) end
+end
+
+-- Kept before helpers requiring new APIs, so the unpatched runtime demonstrably
+-- fails this regression on its permanent T.failed latch, not a missing method.
+test('one transient error recovers after backoff without a relog or XML parse',function()
+ local parses,panels=stats.parses,stats.panels
+ local before=savedState();local initialNative=U[nativeTeam].active
+ oneFault();pulse(0,true)
+ assert(T.failed and U[nativeTeam].active and visible()==0)
+ assert(D[SAVE..'ENABLED']==1)
+ pulse(999,true);assert(T.failed)
+ pulse(1,true);assert(not T.failed,'Transient failure remained latched')
+ pulse(100);assert(visible()>0 and U[nativeTeam].active==initialNative)
+ assert(stats.parses==parses and stats.panels==panels)
+ sameSaved(before);getTargetName=normalTargetName
+end)
+
 test('hot reload from old XML requires restart before name-ID writes',function()
  local n=U[DRIVER..':corner_drag_v3'];U[DRIVER..':corner_drag_v3']=nil;local sets=stats.idSets
  dofile('user/team_compact.lua');T=RyzomTeamUI;T:update()
@@ -669,4 +732,246 @@ test('missing native pointer API fails safely to native team window',function()
  dofile('user/team_compact.lua');T=RyzomTeamUI;local keep=getCurrentWindowUnder;getCurrentWindowUnder=nil
  T:update();nativeCoords();assert(T.failed and U['ui:interface:team_list'].active and visible()==0);getCurrentWindowUnder=keep
 end)
+test('persistent errors exhaust exactly three timed retries without busy looping',function()
+ healthy();U[nativeTeam].active=false
+ local parses=stats.parses;local calls=0;local nMessages=#messages
+ getTargetName=function()calls=calls+1;error('injected persistent failure')end
+ pulse(0,true);assert(T.failed and calls==1)
+ for _,delay in ipairs({1000,3000,10000}) do
+  local n=calls
+  for i=1,100 do T:start();T:update(true) end
+  assert(calls==n,'force/start bypassed retry backoff')
+  pulse(delay);assert(T.failed and calls==n+1)
+ end
+ assert(T.retryCount==3 and not T.retryAt)
+ for i=1,200 do pulse(10000,true) end
+ assert(calls==4 and stats.parses==parses and #messages-nMessages<=2)
+ assert(not T.busy and not T.inEvent and not T.inCoords)
+ healthy()
+end)
+test('settings show fallback and off/on recovers an exhausted controller',function()
+ healthy();getTargetName=function()error('persistent')end;pulse(0,true)
+ PadUISettings:refresh()
+ assert(U['ui:interface:padui_settings:content:page1:window1_text'].hardtext:find('fallback',1,true))
+ local before=savedState();getTargetName=normalTargetName
+ PadUISettings:toggleWindow(1);assert(D[SAVE..'ENABLED']==0 and visible()==0)
+ pulse(20000);assert(visible()==0)
+ PadUISettings:toggleWindow(1);pulse(100)
+ assert(not T.failed and visible()>0 and D[SAVE..'ENABLED']==1)
+ sameSaved(before)
+ assert(not U['ui:interface:padui_settings:content:page1:window1_text'].hardtext:find('fallback',1,true))
+end)
+test('disabling during a pending retry never re-enables the team',function()
+ healthy();oneFault();pulse(0,true);T:toggle()
+ local polls=T.stats.polls
+ for i=1,20 do pulse(10000) end
+ assert(visible()==0 and T.stats.polls==polls and D[SAVE..'ENABLED']==0)
+ getTargetName=normalTargetName;T:toggle();pulse(100);assert(not T.failed and visible()>0)
+end)
+test('a previously visible native team stays visible after recovery',function()
+ healthy();U[nativeTeam].active=true
+ oneFault();pulse(0,true);assert(not T.fallbackOwned)
+ pulse(1000);pulse(100);assert(not T.failed and U[nativeTeam].active)
+ U[nativeTeam].active=false;getTargetName=normalTargetName
+end)
+test('one good frame does not reset the retry budget',function()
+ healthy();oneFault();pulse(0,true);pulse(1000);assert(T.retryCount==1)
+ oneFault();pulse(0,true);assert(T.failed and T.retryAt==clock+3000)
+ pulse(3000);assert(T.retryCount==2)
+ pulse(29999);assert(T.retryCount==2)
+ pulse(1);assert(T.retryCount==0);getTargetName=normalTargetName
+end)
+test('clock rollback reschedules rather than spinning retries',function()
+ healthy();oneFault();pulse(0,true)
+ clock=clock-5000;pulse(0);assert(T.failed and T.retryCount==0)
+ pulse(999);assert(T.failed);pulse(1);assert(not T.failed)
+ getTargetName=normalTargetName
+end)
+test('without a clock no automatic retries occur but manual retry works',function()
+ healthy();local time=nltime;nltime=nil
+ oneFault();pulse(0,true);assert(T.failed and not T.retryAt)
+ for i=1,100 do T:update(true)end
+ assert(T.failed and T.retryCount==0)
+ getTargetName=normalTargetName;T:retry();assert(not T.failed)
+ nltime=time
+end)
+test('recovery waits for mouse release and rejects that old release callback',function()
+ healthy();local v=T.cards[1]
+ press(v);oneFault();pulse(0,true);assert(T.failed and T.discardRelease)
+ pulse(2000);assert(T.failed and T.retryCount==0)
+ mouse=false;pulse(0);assert(not T.failed)
+ local n=#actions;T:click(v.slot,'left');assert(#actions==n,'Old release selected a new row')
+ capture=nil;nativeStart=nil;getTargetName=normalTargetName;pulse(100)
+ local current=T.cards[1];n=#actions;press(current);release();assert(#actions==n+1)
+end)
+test('failure clears context-menu snapshots and interrupted drags',function()
+ healthy();local v=T.cards[1];T:click(v.slot,'right');assert(T.menuMember)
+ oneFault();pulse(0,true);assert(not T.menuMember and not T.nativeDrag and not T.pointer)
+ pulse(1000);local n=#actions;T:menuAction('select');assert(#actions==n)
+ getTargetName=normalTargetName
+end)
+test('click callback errors use the same containment as draw errors',function()
+ healthy();local old=getMousePos
+ getMousePos=function()error('injected click failure')end
+ local ok=pcall(function()T:click(1,'left')end)
+ getMousePos=old
+ assert(ok and T.failed and U[nativeTeam].active and not T.inEvent)
+ pulse(1000);assert(not T.failed)
+end)
+test('required missing font aborts binding without reparsing or partial cards',function()
+ healthy();local path=CARD..'1:header_opened:name_s7';local keep=U[path];local parses=stats.parses
+ U[path]=nil;T:retry();assert(T.failed and T.fatal and #T.cards==0)
+ local sets=stats.idSets
+ for i=1,20 do pulse(10000);T:start() end
+ assert(stats.parses==parses and stats.idSets==sets)
+ U[path]=keep;T:retry();pulse(100);assert(not T.failed)
+end)
+test('missing native mover is not reconstructed during recovery',function()
+ healthy();local path=CARD..'1:mover';local keep=U[path];U[path]=nil
+ T:retry();assert(T.failed and T.fatal and U[path]==nil)
+ U[path]=keep;T:retry();assert(not T.failed)
+end)
+test('missing driver with surviving cards never parses duplicate root windows',function()
+ healthy();local keep=U[DRIVER];U[DRIVER]=nil;local parses=stats.parses
+ T:retry();assert(T.failed and T.fatal and stats.parses==parses)
+ for i=1,20 do T:start();pulse(10000) end
+ assert(stats.parses==parses)
+ U[DRIVER]=keep;T:retry();assert(not T.failed)
+end)
+test('DB-bound replacement source is rejected before any text-ID assignment',function()
+ healthy();local path=DRIVER..':name_source0';local sets=stats.idSets
+ R[path].textid_dblink='SERVER:GROUP:0:NAME';pulse(0,true)
+ assert(T.failed and T.fatal and stats.idSets==sets)
+ R[path].textid_dblink='';T:retry();assert(not T.failed)
+end)
+test('removed optional legacy name label does not disable the team',function()
+ healthy();local path=LEGACY..':content:name_source0';local keep=U[path]
+ U[path]=nil;pulse(0,true);assert(not T.failed)
+ U[path]=keep
+end)
+test('same-ID replacements use fresh native handles for writes and methods',function()
+ healthy();local card=T.cards[1]
+ local bar=card.nodes.hp_fill.id;add(bar,R[bar])
+ D['UI:VARIABLES:USER:HP_RATIO']=512;pulse(0,true)
+ assert(not T.failed and R[bar].w==math.floor(T.hpW/2+0.5))
+ local name=card.nodes.name.id;add(name,R[name])
+ -- Changing input geometry calls setLineMaxW on the existing alias. The mock
+ -- rejects both stale native self and mistakenly passing a Lua ID proxy.
+ card.inputKey=nil;T:inputGeometry(card,D[SAVE..'LOCKED']==1)
+ assert(not T.failed);D['UI:VARIABLES:USER:HP_RATIO']=1024;pulse(100)
+end)
+test('recursive native move notifications cannot reenter coordinate layout',function()
+ healthy();populate(2);pulse(100);pulse(100);T:setLayout(0);T:resetPositions();unlock(T)
+ local v=T.cards[1];local calls=0
+ coordCallback=function()
+  calls=calls+1;assert(calls<50,'Recursive native layout')
+  T:beginNativeMove(1);T:nativeMove(1);T:update(true)
+ end
+ local x=v.x;pressGrip(v,false);move(5,0,false)
+ coordCallback=nil;release(false)
+ assert(not T.failed and v.x==x+5 and calls>0 and not T.inCoords)
+end)
+test('coordinate error clears reentrancy guard and allows a later retry',function()
+ healthy();populate(2);pulse(100);pulse(100);T:setLayout(0);T:resetPositions();unlock(T);local first=true
+ coordCallback=function()if first then first=false;error('injected coordinate failure')end end
+ local v=T.cards[1];pressGrip(v,false);move(5,0,false)
+ coordCallback=nil;mouse=false;capture=nil;nativeStart=nil
+ assert(T.failed and not T.inCoords and not T.inEvent and not T.busy)
+ pulse(1000);assert(not T.failed)
+end)
+test('one failing hide operation does not skip other windows or fallback',function()
+ healthy();populate(8);pulse(100);pulse(100);assert(visible()==9)
+ writeFault=function(id,key,value)
+  if id==CARD..'1' and key=='active' and value==false then error('injected hide failure')end
+ end
+ oneFault();pulse(0,true)
+ assert(T.failed and U[nativeTeam].active)
+ for i=2,9 do assert(not U[CARD..i].active)end
+ writeFault=nil;mouse=false;getTargetName=normalTargetName;T:retry();pulse(100)
+ assert(not T.failed)
+end)
+test('minimized viewport does not overwrite saved positions or resize cards to zero',function()
+ healthy();T:savePositions();local before=savedState();local x,y=T.anchorX,T.anchorY
+ local oldW,oldH=sw,sh;sw,sh=0,0
+ pulse(100,true);assert(not T.failed and T.anchorX==x and T.anchorY==y)
+ sameSaved(before)
+ sw,sh=oldW,oldH;pulse(100,true);assert(not T.failed)
+end)
+test('non-finite preference values never reach native geometry',function()
+ healthy();D['UI:SAVE:PADUI:TEAM_SCALE']=0/0
+ pulse(100,true);assert(not T.failed and T.cellW==200)
+ D['UI:SAVE:PADUI:TEAM_SCALE']=100
+end)
+test('settings initialization errors do not hide a functioning team',function()
+ healthy();local path=PAGE..':modular_team';local keep=U[path];U[path]=nil;T.panel=nil
+ local create=createGroupInstance;createGroupInstance=function()error('injected settings failure')end
+ T:start();assert(not T.failed and T.settingsError and visible()>0)
+ U[path]=keep;createGroupInstance=create;T.panel=nil;T.settingsError=nil
+ pulse(100);assert(not T.failed)
+end)
+test('logout from failure drops all handles and errors before next character',function()
+ healthy();oneFault();pulse(0,true)
+ game.InGameDbInitialized=false;T:update()
+ assert(not T.failed and not T.character and #T.cards==0 and not T.driver and not T.menuMember)
+ getTargetName=normalTargetName;game.InGameDbInitialized=true;T:start();pulse(100)
+ assert(not T.failed and visible()>0)
+end)
+test('initial render cannot create windows; explicit startup creates once',function()
+ healthy();game.InGameDbInitialized=false;T:update()
+ local savedU,savedR={},{}
+ for id,obj in pairs(U) do
+  if id:sub(1,#DRIVER)==DRIVER or id:sub(1,#CARD)==CARD then savedU[id]=obj;savedR[id]=R[id]end
+ end
+ for id in pairs(savedU)do U[id]=nil;R[id]=nil end
+ local parses=stats.parses;game.InGameDbInitialized=true
+ T:update(true);assert(stats.parses==parses and not T.failed)
+ T:start();pulse(100);assert(stats.parses==parses+1 and not T.failed)
+ T:start();pulse(100);assert(stats.parses==parses+1)
+end)
+test('partial parser failure is never retried into an existing native tree',function()
+ healthy();game.InGameDbInitialized=false;T:update()
+ local savedU,savedR={},{}
+ for id,obj in pairs(U)do
+  if id:sub(1,#DRIVER)==DRIVER or id:sub(1,#CARD)==CARD then savedU[id]=obj;savedR[id]=R[id]end
+ end
+ for id in pairs(savedU)do U[id]=nil;R[id]=nil end
+ local parse=parseInterfaceFromString;local calls=0
+ parseInterfaceFromString=function()calls=calls+1;add(DRIVER,{active=true});error('injected partial parse')end
+ game.InGameDbInitialized=true;T:start();assert(T.failed and calls==1)
+ for i=1,10 do T:start();pulse(10000);T:retry()end
+ assert(calls==1)
+ U[DRIVER]=nil;R[DRIVER]=nil
+ for id,obj in pairs(savedU)do U[id]=obj;R[id]=savedR[id]end
+ parseInterfaceFromString=parse;T:retry();pulse(100);assert(not T.failed)
+end)
+test('first-start failure preserves enabled preference before migration',function()
+ healthy();U[nativeTeam].active=false;T.fallbackOwned=false
+ local path=CARD..'1:header_opened:name_s7';local keep=U[path]
+ D[SAVE..'INIT']=0;R[LEGACY].active=true
+ U[path]=nil;T:forgetUI();T:start()
+ assert(T.failed and T:isEnabled() and U[nativeTeam].active)
+ U[path]=keep;T:retry();pulse(100)
+ assert(not T.failed and D[SAVE..'ENABLED']==1 and visible()>0)
+end)
+test('first-start failure also preserves disabled preference and can be enabled',function()
+ healthy();U[nativeTeam].active=false;T.fallbackOwned=false
+ local path=CARD..'1:header_opened:name_s7';local keep=U[path]
+ D[SAVE..'INIT']=0;R[LEGACY].active=false
+ U[path]=nil;T:forgetUI();T:start()
+ assert(T.failed and not T:isEnabled() and not U[nativeTeam].active)
+ U[path]=keep;T:toggle();pulse(100)
+ assert(not T.failed and D[SAVE..'ENABLED']==1 and visible()>0)
+end)
+test('errors in the retry mouse gate are contained and consume retry budget',function()
+ healthy();oneFault();pulse(0,true)
+ local mouseFn=getMouseDown;getMouseDown=function()error('injected retry mouse failure')end
+ local ok=pcall(function()pulse(1000)end)
+ getMouseDown=mouseFn;getTargetName=normalTargetName
+ assert(ok and T.failed and T.retryCount==1 and not T.handlingFailure)
+ pulse(3000);assert(not T.failed)
+end)
+test('all failure tests still avoid UInt32 reads and preserve event guards',function()
+ assert(stats.unsignedReads==0 and not T.busy and not T.inEvent and not T.inCoords)
+end)
+
 print(string.format('PASS all %d regression cases (%s)',count,_VERSION))

@@ -22,13 +22,56 @@ local words = {
  en={title='Team windows', modes={'Vertical','Horizontal','Free'}, columns='Columns (vertical)', rows='Rows (horizontal)', free='Individual positions saved', locked='LOCK: On', unlocked='LOCK: Off (drag)', reset='Reset positions', note='Name/bars: target. Top-right grip: drag with LOCK off.', grip_tip='Drag arrows to move this window', grip_group='Drag arrows to move the entire team', overflow='Grid exceeds screen: adjust scale or row/column count.'},
  fr={title='Fen\195\170tres d\226\128\153\195\169quipe', modes={'Vertical','Horizontal','Libre'}, columns='Colonnes (vertical)', rows='Lignes (horizontal)', free='Positions individuelles sauv\195\169es', locked='LOCK : actif', unlocked='LOCK : inactif', reset='Replacer les fen\195\170tres', note='Nom/jauges : cible. Poignee en haut a droite : deplacer (LOCK inactif).', grip_tip='Tirer les fleches pour deplacer la fenetre', grip_group='Tirer les fleches pour deplacer toute l equipe', overflow='Grille trop grande : ajuster la taille ou les lignes/colonnes.'}
 }
-local function db(p) return tonumber(getDbProp(p)) or 0 end
+local function finite(v) return type(v)=='number' and v==v and v~=math.huge and v~=-math.huge end
+local function db(p)
+ local v=tonumber(getDbProp(p));return finite(v) and v or 0
+end
 local function ready() return game and game.InGameDbInitialized and (not isPlayerReady or isPlayerReady()) end
 local function clean(s) return tostring(s or ''):gsub('@%b{}',''):gsub('%s*%(.*$',''):match('^%s*(.-)%s*$') end
 local function round(x) return x < 0 and -math.floor(-x+0.5) or math.floor(x+0.5) end
 local function clamp(x, a, b) return math.max(a, math.min(b, x)) end
 local function percent(v, maximum) return round(clamp(v / maximum, 0, 1) * 100) end
 local function ui(p) return getUI(p, false) end
+local function structural(message) error('TEAM_UI_STRUCTURE: '..message,0) end
+local function required(path)
+ local n=ui(path)
+ if not n then structural('Missing '..path) end
+ return n
+end
+-- Cache IDs, never native userdata across frames, failure recovery or logout.
+-- Methods must receive a freshly resolved native self, NOT this Lua proxy.
+local REF_METHODS={updateCoords=true,invalidateCoords=true,setLineMaxW=true}
+local REF_MT={
+ __index=function(r,k)
+  if k=='id' then return rawget(r,'path') end
+  if REF_METHODS[k] then
+   return function(_,...) local n=required(r.path);return n[k](n,...) end
+  end
+  return required(r.path)[k]
+ end,
+ __newindex=function(r,k,value) required(r.path)[k]=value end
+}
+local function ref(path)
+ required(path)
+ return setmetatable({path=path},REF_MT)
+end
+local function updateCoords(w)
+ -- Native layout may synchronously call a mover handler. Do not recursively
+ -- rearrange the team while another coordinate pass is still in progress.
+ if T.inCoords then return end
+ T.inCoords=true
+ local ok,err=pcall(function() w:updateCoords() end)
+ T.inCoords=false
+ if not ok then error(err,0) end
+end
+local function nowMs()
+ if nltime and nltime.getLocalTime then
+  local ok,n=pcall(nltime.getLocalTime)
+  if ok and finite(n) then return n end
+ end
+ -- No frame-count retries: without a clock, manual retry remains available.
+ return nil
+end
 local function changed(n, k, value)
  if n and n[k] ~= value then n[k] = value; return true end
  return false
@@ -76,6 +119,7 @@ function T:horizontal() return T:mode() == 1 end
 function T:showSelf() return db('UI:SAVE:PADUI:HIDE_SELF') == 0 end
 function T:isEnabled()
  if db(SAVE..'INIT') == 1 then return db(SAVE..'ENABLED') == 1 end
+ if T.pendingEnabled~=nil then return T.pendingEnabled end
  local w = ui(LEGACY); return w and w.active or false
 end
 function T:sortMode()
@@ -161,9 +205,16 @@ T.rows, T.cards, T.members = {}, {}, {}
 T.lastTick, T.character, T.failed, T.initializing = nil, nil, nil, false
 T.uiReady, T.panel, T.busy, T.menuMember = false, nil, false, nil
 T.pointer, T.pointerWasDown, T.nativeDrag, T.nativeBlocked = nil, false, nil, false
+T.allowCreate,T.inCoords,T.inEvent,T.handlingFailure=false,false,false,false
+T.retryCount,T.retryAt,T.retryClock,T.stableSince=0,nil,nil,nil
+T.fatal,T.failureActive,T.fallbackOwned=false,false,false
+T.sessionReady,T.createAttempted,T.settingsError=false,false,nil
+T.discardRelease,T.pendingEnabled=false,nil
+local RETRY_DELAYS={1000,3000,10000}
+local STABLE_MS=30000
 local function put(v, id, key, value)
  local n = v.nodes[id]
- if not n then return end
+ if not n then structural('Missing bound member element '..id) end
  local ck = id..':'..key
  if v.cache[ck] ~= value then
   if changed(n,key,value) then T.stats.writes=T.stats.writes+1 end
@@ -172,64 +223,76 @@ local function put(v, id, key, value)
 end
 function T:hideCards()
  T:cancelPointer()
- for _,v in ipairs(T.cards) do
-  if v.window then changed(v.window,'active',false) end
+ -- Resolve each root independently; a missing/bad card cannot prevent the
+ -- remaining cards from being hidden. Never remove native tree entries here.
+ for i=1,9 do
+  pcall(function() local w=ui(CARD..i);if w then changed(w,'active',false) end end)
  end
+end
+function T:forgetUI()
+ T:cancelPointer()
+ T.uiReady,T.panel,T.driver,T.legacy=false,nil,nil,nil
+ T.cards,T.sources,T.oldSources,T.nameRequests={},{},{},{}
+ T.rows,T.members,T.ordered={},{},{}
+ T.character,T.lastTick,T.menuMember=nil,nil,nil
+ T.rosterKey,T.sortKey,T.layoutKey,T.geometryKey=nil,nil,nil,nil
+ T.pointer,T.pointerWasDown,T.pendingPositionSave=nil,false,false
+ T.viewportW,T.viewportH,T.lastMode=nil,nil,nil
 end
 function T:initUI()
  if T.uiReady then return true end
  if not parseInterfaceFromString or not createGroupInstance or not addDbProp or not getMouseDown or not getMousePos or not getCurrentWindowUnder or not setOnDraw then
-  error('Client lacks native XML/template/DB/mouse/draw API')
+  structural('Client lacks native XML/template/DB/mouse/draw API')
  end
- local legacy = ui(LEGACY)
- if not legacy then return false end
+ local legacy=ui(LEGACY)
+ if not legacy then structural('Missing legacy team switch') end
  if not ui(DRIVER) then
-  if parseInterfaceFromString(T:interfaceXML()) == false then error('Cannot parse modular team XML') end
-  T.stats.builds = T.stats.builds+1
+  -- Only the explicit startup hook may create native windows. A draw callback,
+  -- retry or partially missing tree must NEVER insert a second set of roots.
+  for i=1,9 do if ui(CARD..i) then structural('Partial team tree; restart Ryzom') end end
+  if not T.allowCreate or T.createAttempted then structural('Team tree unavailable; restart Ryzom') end
+  T.createAttempted=true
+  local parsed,result=pcall(parseInterfaceFromString,T:interfaceXML())
+  if not parsed or result==false then structural('Cannot parse modular team XML: '..tostring(result)) end
+  T.stats.builds=T.stats.builds+1
  end
- T.driver, T.legacy = ui(DRIVER), legacy
- if not T.driver then error('Team controller not created') end
- if not ui(DRIVER..':corner_drag_v3') then error('Corner-drag widgets changed; fully restart Ryzom') end
- T.sources, T.oldSources, T.nameRequests = {}, {}, {}
+ if not ui(DRIVER..':corner_drag_v3') then structural('Corner-drag widgets changed; fully restart Ryzom') end
+ setOnDraw(required(DRIVER),'RyzomTeamUI:update()')
+ changed(required(DRIVER),'active',true)
+ -- Build a complete binding transaction before exposing any card to updates.
+ local cards,sources,oldSources={},{},{}
  for i=0,7 do
-  T.sources[i] = ui(DRIVER..':name_source'..i)
-  T.oldSources[i] = ui(LEGACY..':content:name_source'..i)
-  if not T.sources[i] then error('Missing native team name source '..i) end
-  -- A previous test version bound this view to SERVER:GROUP. Never write its
-  -- textid: the native setter would write through that DB link. Restart first.
-  if T.sources[i].textid_dblink~='' then error('Team name widgets changed; fully restart Ryzom') end
+  local path=DRIVER..':name_source'..i
+  if required(path).textid_dblink~='' then structural('DB-bound team name source; restart Ryzom') end
+  sources[i]=ref(path)
+  local old=LEGACY..':content:name_source'..i
+  oldSources[i]=ui(old) and ref(old) or nil
  end
  for i=1,9 do
-  local w = ui(CARD..i)
-  if not w then error('Team member window not created: '..i) end
-  local v = {window=w, nodes={}, cache={}, slot=i}
-  v.nodes.window = w
-  v.nodes.header = ui(CARD..i..':header_opened')
+  local path=CARD..i
+  local w=ref(path)
+  local v={window=w,nodes={window=w,header=ref(path..':header_opened')},cache={},slot=i}
   for _,id in ipairs({'background','grip','grip_h','grip_v','selected','self_marker','hp_back','hp_fill','sap_back','sap_fill','sta_back','sta_fill','target_button','target_top','target_bottom','target_rim'}) do
-   v.nodes[id] = ui(CARD..i..':header_opened:'..id)
-   if not v.nodes[id] then error('Missing member element '..id) end
+   v.nodes[id]=ref(path..':header_opened:'..id)
   end
-  for _,part in ipairs(GRIP_HEADS) do
-   v.nodes['grip_'..part]=ui(CARD..i..':header_opened:grip_'..part)
-   if not v.nodes['grip_'..part] then error('Missing move arrow; fully restart Ryzom') end
-  end
+  for _,part in ipairs(GRIP_HEADS) do v.nodes['grip_'..part]=ref(path..':header_opened:grip_'..part) end
   for _,id in ipairs(TEXT_IDS) do
-   for size=7,18 do v.nodes[id..'_s'..size] = ui(CARD..i..':header_opened:'..id..'_s'..size) end
+   for size=7,18 do v.nodes[id..'_s'..size]=ref(path..':header_opened:'..id..'_s'..size) end
   end
-  -- Dynamic parse only sets OpenAtStart; the normal startup launch has already
-  -- run. Native setup must exist before explicitly opening header/content.
-  w:updateCoords()
+  if not ui(path..':mover') then
+   if not T.allowCreate then structural('Missing native mover; restart Ryzom') end
+   updateCoords(w) -- native setup, only during startup
+  end
+  v.nodes.mover=ref(path..':mover')
   changed(w,'opened',true)
-  w:updateCoords()
-  v.nodes.mover=ui(CARD..i..':mover')
-  if not v.nodes.mover then error('Native team mover missing; fully restart Ryzom') end
-  -- Only these new containers: no native frame/fading, custom bars stay visible.
-  runAH(nil,'set_alpha','target='..CARD..i..'|alpha=0')
-  T.cards[i] = v
+  updateCoords(w)
+  runAH(nil,'set_alpha','target='..path..'|alpha=0')
+  cards[i]=v
  end
- setOnDraw(T.driver,'RyzomTeamUI:update()') -- ONE frame hook for all nine windows
+ T.cards,T.sources,T.oldSources,T.nameRequests=cards,sources,oldSources,{}
+ T.driver,T.legacy=ref(DRIVER),ref(LEGACY)
  setOnDraw(legacy,'')
- T.uiReady = true
+ T.uiReady=true
  return true
 end
 function T:initCharacter(name)
@@ -244,13 +307,14 @@ function T:initCharacter(name)
  declareSaved(false)
  if db(SAVE..'INIT') ~= 1 then
   local sw,sh=getWindowSize();sw=tonumber(sw) or 1280;sh=tonumber(sh) or 720
-  store(SAVE..'ENABLED', T.legacy.active and 1 or 0)
+  store(SAVE..'ENABLED', T:isEnabled() and 1 or 0)
   store(SAVE..'COLUMNS',1);store(SAVE..'ROWS',2);store(SAVE..'LOCKED',1)
   store(SAVE..'ANCHOR_X',clamp(round(T.legacy.x_real or 20),0,math.max(0,sw-200)))
   local top=(T.legacy.y_real or sh-100)+(T.legacy.h_real or 0)
   store(SAVE..'ANCHOR_Y',-clamp(round(sh-top),0,math.max(0,sh-34)))
   store(SAVE..'INIT',1)
  end
+ T.pendingEnabled=nil
  T.anchorX,T.anchorY=db(SAVE..'ANCHOR_X'),db(SAVE..'ANCHOR_Y')
  for _,v in ipairs(T.cards) do
   local p=SAVE..'FREE:'..v.slot..':'
@@ -290,11 +354,12 @@ function T:installSettings()
   local page=ui(PAGE);if not page then return end
   local p=ui(PAGE..':modular_team')
   if not p then
+   if not T.allowCreate then return end
    p=createGroupInstance('padui_modular_team_settings',page.id,{})
    if not p then error('Cannot create modular team settings') end
    page:addGroup(p)
   end
-  T.panel=p
+  T.panel=true -- existence marker, not a retained native userdata
   for _,id in ipairs({'team_layout_text','team_layout0','team_layout0_back','team_layout0_text','team_layout1','team_layout1_back','team_layout1_text'}) do changed(ui(PAGE..':'..id),'active',false) end
   -- Make room without changing either existing scale slider or item-bar logic.
   local ys={item_layout_text=-180,timer_scale_text=-241,timer_scale_slider=-263,timer_scale_value=-266,layout_note=-296}
@@ -304,6 +369,7 @@ function T:installSettings()
  end
 end
 function T:refreshSettings()
+ T:refreshHealth()
  if not T.uiReady or not T.panel then return end
  local w=labels();local mode=T:mode()
  local function label(id,value) changed(ui(PAGE..':modular_team:'..id),'hardtext',value) end
@@ -319,23 +385,28 @@ function T:refreshSettings()
  label('reset:text',w.reset)
  changed(ui(PAGE..':layout_note'),'hardtext',T.overflow and w.overflow or w.note)
  -- The legacy container is an inactive switch, not the visibility authority.
- local st=PadUISettings:texts()
- changed(ui('ui:interface:padui_settings:content:page1:window1_text'),'hardtext',(T:isEnabled() and '[x] ' or '[ ] ')..st.team)
+ T:refreshHealth()
 end
 function T:requestUpdate()
  T.lastTick=nil;T:update(true)
  if PadUISettings then PadUISettings:refresh() end
 end
 function T:toggle()
- if not ready() or not T.character then return end
- T:cancelPointer();T:savePositions();T.dragging=nil
- store(SAVE..'ENABLED',T:isEnabled() and 0 or 1)
- T.legacy.active=false
- store(ACTIVE_DB,T:isEnabled() and 1 or 0)
- T:requestUpdate()
+ if not ready() then return end
+ local enabled=not T:isEnabled()
+ if db(SAVE..'INIT')~=1 then T.pendingEnabled=enabled end
+ T:cancelPointer()
+ if not T.failed then T:savePositions() end
+ store(SAVE..'ENABLED',enabled and 1 or 0)
+ store(ACTIVE_DB,enabled and 1 or 0)
+ local old=ui(LEGACY);if old then old.active=false end
+ if enabled and T.failed then T:retry()
+ elseif not enabled then
+  T:hideCards();T:releaseFallback();T:refreshHealth()
+ else T:requestUpdate() end
 end
 function T:toggleFromLegacy()
- if T.initializing then return end
+ if T.initializing or T.handlingFailure then return end
  T:toggle()
 end
 function T:setLayout(mode)
@@ -374,6 +445,7 @@ function T:openSortMenu() end -- compatibility only; no on-window sort bar
 -- for textid because that helper reads a property before writing it.
 function T:memberName(index,nameId,uid)
  local source=T.sources[index]
+ if not source or source.textid_dblink~='' then structural('Invalid team name source') end
  local request=T.nameRequests[index]
  if not request or request.nameId~=nameId or request.uid~=uid then
   source.textid=0
@@ -411,7 +483,7 @@ function T:collect(ownName)
   local uid=db(p..'UID')
   local name=T:memberName(index,nameId,uid)
   local old=T.oldSources[index]
-  if old then changed(old,'hardtext',name) end -- target-of-target compatibility
+  if old and ui(old.id) then changed(old,'hardtext',name) end -- target-of-target compatibility
   if name~='' and name:sub(1,1)~='#' and name:lower()~=ownLower then
    local key='uid:'..uid
    if not live[key] then
@@ -518,7 +590,6 @@ end
 function T:inputGeometry(v,locked)
  local key=T.geometryKey..':'..tostring(locked)
  if v.inputKey==key then return end
- v.inputKey=key
  local size=math.max(8,round(8*T.scale))
  local margin=4
  local x=T.cellW-size-margin
@@ -549,17 +620,20 @@ function T:inputGeometry(v,locked)
  local right=locked and round(4*T.scale) or size+margin+4
  put(v,'status','x',-right)
  v.nodes.name:setLineMaxW(math.max(1,T.cellW-right-round(82*T.scale)))
+ v.inputKey=key
 end
 
 -- These callbacks are native mouse events, not inferred from a hover window
 -- or a frame-time press edge. Native capture keeps moving outside the grip.
 function T:beginNativeMove(slot)
+ if T.inCoords then return end
  slot=tonumber(slot)
  local v=slot and T.cards[slot]
  if not ready() or T.failed or not T.uiReady or not T:isEnabled()
   or db(SAVE..'LOCKED')==1 or not v or not v.member or not v.window.active
   or v.x==nil or not T.geometryKey then return end
  T:cancelPointer();T.nativeBlocked=false;T.pointer=nil;T.pointerWasDown=true
+ T.discardRelease=false -- a native begin event proves a new gesture
  local m=v.member
  T.nativeDrag={slot=slot,key=v.key,uid=m.uid,nameId=m.nameId,index=m.index,
   mode=T:mode(),geometry=T.geometryKey,roster=T.rosterKey,
@@ -568,6 +642,7 @@ function T:beginNativeMove(slot)
  T.dragging=slot
 end
 function T:nativeMove(slot)
+ if T.inCoords then return end
  slot=tonumber(slot)
  local g=T.nativeDrag
  local v=slot and T.cards[slot]
@@ -696,6 +771,7 @@ function T:trackMovement(mode)
  local mx,my=getMousePos()
  if type(mx)~='number' or type(my)~='number' then return end
  if down and not T.pointerWasDown then
+  T.discardRelease=false
   T.pointer=nil
   -- Reject clicks behind another UI window or started in the game world.
   local over=getCurrentWindowUnder()
@@ -759,6 +835,7 @@ function T:arrange(mode,sw,sh)
  end
  for rank,m in ipairs(T.ordered) do
   local v=T.cards[m.viewSlot];local x,y
+  if not v or v.key~=m.key then error("Team binding changed during layout") end
   if mode==2 then
    if not v.freeSet then
     -- First free placement starts from the previous automatic position.
@@ -774,7 +851,7 @@ function T:arrange(mode,sw,sh)
   local movedX=changed(v.window,'x',round(x))
   local movedY=changed(v.window,'y',round(sh+y))
   -- Update each sibling's real rectangle now, not just the grabbed container.
-  if movedX or movedY then v.window:updateCoords() end
+  if movedX or movedY then updateCoords(v.window) end
   v.x,v.y=round(x),round(y)
   v.nativeX,v.nativeY=v.window.x,v.window.y
  end
@@ -835,11 +912,16 @@ function T:step(force)
  local ownName=clean(getPlayerName());if ownName=='' then return end
  if not T:initUI() then return end
  if T.character~=ownName then T:initCharacter(ownName) end
- T:installSettings()
+ if not T.settingsError then
+  local ok,err=pcall(T.installSettings,T)
+  if not ok then T.settingsError=tostring(err);pcall(debugInfo,'PadUI Team settings: '..T.settingsError) end
+ end
  if not T:isEnabled() then T:hideCards();return end
  local mode=T:mode()
  local tick=db('UI:VARIABLES:CURRENT_SMOOTH_SERVER_TICK')
  local sw,sh=getWindowSize();sw=tonumber(sw) or 1280;sh=tonumber(sh) or 720
+ -- Minimized/invalid viewport is not a new saved team position.
+ if not finite(sw) or not finite(sh) or sw<=0 or sh<=0 then return end
  local viewportChanged=T.viewportW~=sw or T.viewportH~=sh
  if viewportChanged then
   -- Native resize/clamping is not a user drag. Preserve the saved top offsets.
@@ -859,37 +941,129 @@ function T:step(force)
   T:geometry(scale,clamp(db('UI:SAVE:PADUI:FONT_DELTA'),-1,1))
   T:arrange(mode,sw,sh);T:render(ownName)
  elseif T.geometryKey then T:arrange(mode,sw,sh) end
+ return true
+end
+-- Failures are an explicit state, not an irreversible hidden-window latch.
+function T:refreshHealth()
+ local enabled=T:isEnabled()
+ local status=''
+ if enabled and (T.failed or T.failureActive) then
+  local lang=PadUI:language()
+  status=lang=='de' and ' [Ersatzanzeige]' or (lang=='fr' and ' [secours]' or ' [fallback]')
+ end
+ local title=PadUISettings and PadUISettings:texts().team or 'PadUI Team'
+ changed(ui('ui:interface:padui_settings:content:page1:window1_text'),'hardtext',(enabled and '[x] ' or '[ ] ')..title..status)
+end
+function T:releaseFallback()
+ if not T.fallbackOwned then return end
+ local native=ui('ui:interface:team_list')
+ if native then changed(native,'active',false) end
+ T.fallbackOwned=false
+end
+function T:fail(phase,err)
+ if T.handlingFailure then return end
+ T.handlingFailure=true
+ -- Preserve the requested visibility even if first-time migration failed.
+ pcall(function()
+  if db(SAVE..'INIT')~=1 then T.pendingEnabled=T:isEnabled() end
+ end)
+ T.failed=tostring(err);T.failureActive=true;T.stableSince=nil
+ local mouseOK,down=pcall(function() return getMouseDown and getMouseDown() end)
+ T.discardRelease=T.discardRelease or (mouseOK and down==true) or false
+ T.fatal=T.failed:find('TEAM_UI_STRUCTURE:',1,true)~=nil
+ T:hideCards()
+ T:forgetUI() -- drops gestures, menu snapshots and partially committed caches
+ local n=nowMs();local delay=RETRY_DELAYS[T.retryCount+1]
+ T.retryClock=n
+ T.retryAt=not T.fatal and n and delay and n+delay or nil
+ pcall(function() local old=ui(LEGACY);if old then old.active=false end end)
+ pcall(function()
+  if not T:isEnabled() then return end
+  local native=ui('ui:interface:team_list')
+  if native and not native.active then native.active=true;T.fallbackOwned=true end
+ end)
+ pcall(debugInfo,'PadUI modular team ['..phase..', retry '..T.retryCount..'/3]: '..T.failed)
+ if T.retryCount==0 or T.fatal or not T.retryAt then
+  pcall(displaySystemInfo,'PadUI Team: '..T.failed..' (native team fallback; toggle Team off/on to retry)','SYS')
+ end
+ pcall(T.refreshHealth,T)
+ T.handlingFailure=false
+end
+function T:retry()
+ -- Explicit user recovery rebinds existing objects only; never reparses XML.
+ if not ready() or T.busy or not T:isEnabled() then return end
+ T.retryCount,T.retryAt,T.retryClock,T.stableSince=0,nil,nil,nil
+ T.failed,T.fatal,T.settingsError=nil,false,nil
+ T:forgetUI()
+ T:update(true)
 end
 function T:update(force)
- if T.busy or T.failed then return end
+ if T.busy or T.handlingFailure or T.inCoords then return end
  if not ready() then
-  if T.uiReady then
-   pcall(T.hideCards,T)
-   T.uiReady=false;T.panel=nil;T.cards={};T.sources=nil;T.oldSources=nil
-   T.driver=nil;T.legacy=nil
+  if T.sessionReady then
+   -- No cached native references or player access during UI teardown.
+   T:hideCards();T:forgetUI()
+   T.failed,T.fatal,T.failureActive=nil,false,false
+   T.retryCount,T.retryAt,T.retryClock,T.stableSince=0,nil,nil,nil
+   T.fallbackOwned=false;T.pendingEnabled=nil;T.sessionReady=false
   end
-  T.character=nil;T.lastTick=nil
   return
  end
+ -- The DB initialization hook owns first creation, not the render loop.
+ if not T.sessionReady and not ui(DRIVER) then return end
+ T.sessionReady=true
+ local n=nowMs()
+ if T.failed then
+  if not T:isEnabled() or T.fatal or not T.retryAt or not n then return end
+  if T.retryClock and n<T.retryClock then T.retryAt=n+RETRY_DELAYS[T.retryCount+1] end
+  T.retryClock=n
+  if n<T.retryAt then return end
+  local mouseOK,down=pcall(function() return getMouseDown() end)
+  if not mouseOK then
+   T.retryCount=T.retryCount+1;T:fail('retry input',down);return
+  end
+  if down then return end
+  T.retryCount=T.retryCount+1
+  T.failed,T.retryAt=nil,nil
+  T:forgetUI()
+  force=true
+ end
  T.busy=true;T.initializing=not T.character
- local ok,err=pcall(T.step,T,force)
+ local ok,result=pcall(T.step,T,force)
  T.initializing=false;T.busy=false
- if not ok then
-  T.failed=tostring(err);pcall(T.hideCards,T)
-  debugInfo('PadUI modular team: '..T.failed)
-  pcall(function()
-   for i=1,9 do local w=ui(CARD..i);if w then w.active=false end end
-   local old=ui(LEGACY);if old then old.active=false end
-   local native=ui('ui:interface:team_list');if native then native.active=true end
-  end)
-  pcall(displaySystemInfo,'PadUI Team: '..T.failed..' (native team window enabled)','SYS')
+ if not ok then T:fail('update',result);return end
+ if result then
+  if T.failureActive then
+   T.failureActive=false
+   pcall(T.releaseFallback,T)
+   pcall(debugInfo,'PadUI modular team: recovered using existing windows')
+   pcall(T.refreshHealth,T)
+  end
+  -- Do not replenish the retry budget after a single lucky frame.
+  if n then
+   if not T.stableSince or n<T.stableSince then T.stableSince=n end
+   if n-T.stableSince>=STABLE_MS then T.retryCount=0 end
+  end
  end
 end
 function T:start()
+ if T.busy or not ready() then return end
+ if T.failed then return end -- repeated startup calls cannot bypass backoff
+ if not T.sessionReady then T.createAttempted=false end
+ T.sessionReady=true;T.busy=true;T.allowCreate=true;T.initializing=true
+ local ok,err=pcall(T.initUI,T)
+ if ok then
+  local settingsOK,settingsErr=pcall(T.installSettings,T)
+  if not settingsOK then
+   T.settingsError=tostring(settingsErr);pcall(debugInfo,'PadUI Team settings: '..T.settingsError)
+  end
+ end
+ T.allowCreate=false;T.busy=false;T.initializing=false
+ if not ok then T:fail('startup',err);return end
  T.lastTick=nil;T:update(true)
 end
 function T:validMember(m)
- if not m or not ready() then return false end
+ if not m or not ready() or T.failed or not T.uiReady or not T:isEnabled() then return false end
  if m.self then return clean(m.name):lower()==clean(getPlayerName()):lower() end
  local p='SERVER:GROUP:'..m.index..':'
  return db(p..'UID')==m.uid and db(p..'NAME')==m.nameId and db(p..'PRESENT')~=0
@@ -906,7 +1080,9 @@ function T:assistMember(m)
 end
 function T:click(slot,side)
  slot=tonumber(slot)
- if not slot or not ready() or T.failed then return end
+ if not slot or slot~=math.floor(slot) or slot<1 or slot>9 or not ready() or T.failed or not T.uiReady or not T:isEnabled() then return end
+ -- A release from the gesture interrupted by failure is never a new click.
+ if T.discardRelease then T.discardRelease=false;return end
  local m=T.rows[slot]
  if side=='left' then
   local cancelled
@@ -926,4 +1102,22 @@ function T:menuAction(action)
  if action=='assist' then T:assistMember(m)
  elseif action=='select' then T:selectMember(m)
  elseif action=='trade' and not m.self and T:selectMember(m) then runAH(nil,'context_exchange','') end
+end
+
+
+-- UI actions run outside onDraw as well. Give them the same containment as the
+-- update loop. Nested calls propagate to the existing outer protected boundary.
+for _,name in ipairs({'beginNativeMove','nativeMove','click','menuAction','target',
+ 'setLayout','changeTracks','toggleLock','toggleSelf','setSort','resetPositions',
+ 'toggle','toggleFromLegacy','retry'}) do
+ local implementation,phase=T[name],name
+ T[name]=function(self,...)
+  if T.handlingFailure then return end
+  if T.busy or T.inEvent then return implementation(self,...) end
+  T.inEvent=true
+  local ok,a,b=pcall(implementation,self,...)
+  T.inEvent=false
+  if not ok then T:fail(phase,a);return false end
+  return a,b
+ end
 end
