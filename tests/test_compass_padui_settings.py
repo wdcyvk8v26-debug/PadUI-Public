@@ -18,9 +18,20 @@ assert len(buttons) == 1
 button = buttons[0]
 
 # 12x12 shortcut sits in the clear upper-right gap above the radar circle.
-assert button.get("group_onclick_l") == "show_hide"
-assert button.get("group_params_l") == "padui_settings"
+# A native button must capture input above the compass scene.
+# The previous group_onclick handler did not reliably open the settings window.
+assert button.get("group_onclick_l") is None
 assert button.get("tooltip") == "PadUI"
+opener = button.find("./ctrl[@id='open_settings'][@type='button']")
+assert opener is not None
+assert opener.get("button_type") == "push_button"
+assert opener.get("onclick_l") == "lua"
+assert opener.get("params_l") == "PadUISettings:openFromMinimap()"
+assert (opener.get("w"), opener.get("h")) == ("12", "12")
+assert int(opener.get("render_layer")) >= 5
+assert "function S:openFromMinimap()" in settings_lua
+assert "window.active=true" in settings_lua
+assert "setTopWindow(window)" in settings_lua
 assert button.get("posref") == "TR TR"
 assert (button.get("x"), button.get("y")) == ("-29", "-8")
 assert (button.get("w"), button.get("h")) == ("12", "12")
@@ -86,4 +97,4 @@ for label in (
 for short_label in ("Minimap: PadUI-Icon", "Minimap: PadUI icon", "Mini-carte : PadUI"):
     assert short_label in settings_lua
 
-print("PASS: PadUI compass button 12px, independent Windows-tab visibility toggle")
+print("PASS: PadUI minimap button opens settings and visibility toggle remains independent")
