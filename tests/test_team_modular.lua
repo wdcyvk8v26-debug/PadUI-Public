@@ -270,6 +270,28 @@ test('signed high-bit name ID uses only the unbound setter',function()
  D['SERVER:GROUP:0:NAME']=-2147483647;strings[2147483649]='HighBit';frame();frame()
  assert(member(200).member.name=='HighBit' and D['SERVER:GROUP:0:NAME']==-2147483647)
 end)
+test('invalid native name sentinel is rejected and logged',function()
+ local sets,prior=stats.idSets,#messages
+ D['SERVER:GROUP:0:NAME']=-1
+ frame();frame()
+ assert(not member(200) and stats.idSets==sets,'Invalid ID sent to native setter')
+ local reported=false
+ for i=prior+1,#messages do if messages[i]:find('name-id rejected',1,true) then reported=true end end
+ assert(reported,'Missing system-log warning')
+ D['SERVER:GROUP:0:NAME']=100;strings[100]='Member0'
+ frame();frame();assert(member(200),'Valid name must recover')
+end)
+test('team join writes pre-native name and card activation diagnostics',function()
+ populate(0);frame()
+ local prior=#messages
+ populate(1);frame();frame()
+ local name,card=false,false
+ for i=prior+1,#messages do
+  if messages[i]:find('name-id set begin',1,true) then name=true end
+  if messages[i]:find('card activate begin',1,true) and messages[i]:find('teammate',1,true) then card=true end
+ end
+ assert(name and card,'Missing diagnostic breadcrumb')
+end)
 test('rapid slot reuse discards previous member identity',function()
  populate(1);frame();frame();local old=member(200).member
  D['SERVER:GROUP:0:UID']=777;D['SERVER:GROUP:0:NAME']=777;strings[777]='Replacement'
