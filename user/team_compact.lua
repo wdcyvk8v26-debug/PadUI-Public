@@ -318,7 +318,7 @@ function T:initCharacter(name)
  T.rosterKey, T.sortKey, T.layoutKey, T.geometryKey = nil,nil,nil,nil
  T.dragging, T.lastMode, T.pendingPositionSave = nil,nil,false
  T.viewportW,T.viewportH=nil,nil
- for _,v in ipairs(T.cards) do v.key=nil;v.member=nil;v.cache={};v.x=nil;v.y=nil;v.nativeX=nil;v.nativeY=nil end
+ for _,v in ipairs(T.cards) do v.key=nil;v.member=nil;v.diagMemberKey=nil;v.cache={};v.x=nil;v.y=nil;v.nativeX=nil;v.nativeY=nil end
  declareSaved(false)
  if db(SAVE..'INIT') ~= 1 then
   local sw,sh=getWindowSize();sw=tonumber(sw) or 1280;sh=tonumber(sh) or 720
@@ -965,7 +965,8 @@ function T:step(force)
   T.lastTick=tick;T.stats.polls=T.stats.polls+1
   T.phase='collect'
   local members,rosterKey,sortKey=T:collect(ownName)
-  if rosterKey~=T.rosterKey then diagnostic('roster changed','members='..#members) end
+  local rosterChanged=rosterKey~=T.rosterKey
+  if rosterChanged then diagnostic('roster changed','members='..#members) end
   sortKey=mode..':'..T:sortMode()..':'..sortKey
   if sortKey~=T.sortKey and (not T.dragging or rosterKey~=T.rosterKey) then
    table.sort(members,less);T.ordered=members;T.sortKey=sortKey;T.stats.sorts=T.stats.sorts+1
@@ -978,9 +979,12 @@ function T:step(force)
   T.phase='geometry'
   T:geometry(scale,clamp(db('UI:SAVE:PADUI:FONT_DELTA'),-1,1))
   T.phase='arrange'
+  if rosterChanged then diagnostic('arrange begin','members='..#members) end
   T:arrange(mode,sw,sh)
+  if rosterChanged then diagnostic('arrange ok') end
   T.phase='render'
   T:render(ownName)
+  if rosterChanged then diagnostic('render ok') end
  elseif T.geometryKey then
   T.phase='arrange'
   T:arrange(mode,sw,sh)
