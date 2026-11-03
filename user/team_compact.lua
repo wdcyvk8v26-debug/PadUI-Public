@@ -28,6 +28,20 @@ local function db(p)
 end
 local function ready() return game and game.InGameDbInitialized and (not isPlayerReady or isPlayerReady()) end
 local function clean(s) return tostring(s or ''):gsub('@%b{}',''):gsub('%s*%(.*$',''):match('^%s*(.-)%s*$') end
+-- Diagnostics on roster transitions; native/driver crashes cannot be caught.
+local function diagnostic(stage,details)
+ local line='PadUI Team [diag] '..stage..(details and ': '..details or '')
+ if debugInfo then pcall(debugInfo,line) end
+ if displaySystemInfo then pcall(displaySystemInfo,line,'SYS') end
+end
+local function traceError(err)
+ local message=tostring(err)
+ if debug and debug.traceback then
+  local ok,trace=pcall(debug.traceback,message,2)
+  if ok and trace then return trace end
+ end
+ return message
+end
 local function round(x) return x < 0 and -math.floor(-x+0.5) or math.floor(x+0.5) end
 local function clamp(x, a, b) return math.max(a, math.min(b, x)) end
 local function percent(v, maximum) return round(clamp(v / maximum, 0, 1) * 100) end
@@ -209,6 +223,7 @@ T.allowCreate,T.inCoords,T.inEvent,T.handlingFailure=false,false,false,false
 T.retryCount,T.retryAt,T.retryClock,T.stableSince=0,nil,nil,nil
 T.fatal,T.failureActive,T.fallbackOwned=false,false,false
 T.sessionReady,T.createAttempted,T.settingsError=false,false,nil
+T.phase=nil
 T.discardRelease,T.pendingEnabled=false,nil
 local RETRY_DELAYS={1000,3000,10000}
 local STABLE_MS=30000
@@ -447,11 +462,26 @@ function T:memberName(index,nameId,uid)
  local source=T.sources[index]
  if not source or source.textid_dblink~='' then structural('Invalid team name source') end
  local request=T.nameRequests[index]
+ local unsigned=nameId<0 and nameId+4294967296 or nameId
+ -- 0xFFFFFFFF is a sentinel, not a valid native string request.
+ if nameId~=0 and (not finite(unsigned) or unsigned~=math.floor(unsigned) or unsigned<=0 or unsigned>=4294967295) then
+  if not request or request.nameId~=nameId or request.uid~=uid then
+   diagnostic('name-id rejected','slot='..index..' id='..tostring(nameId))
+   T.nameRequests[index]={nameId=nameId,uid=uid}
+  end
+  return ''
+ end
  if not request or request.nameId~=nameId or request.uid~=uid then
+  T.phase='name-source slot '..index
   source.textid=0
   source.hardtext=''
-  if nameId~=0 then source.textid=nameId<0 and nameId+4294967296 or nameId end
+  if nameId~=0 then
+   diagnostic('name-id set begin','slot='..index..' id='..tostring(unsigned))
+   source.textid=unsigned
+   diagnostic('name-id set ok','slot='..index)
+  end
   T.nameRequests[index]={nameId=nameId,uid=uid}
+  T.phase='collect'
  end
  if nameId==0 then return '' end
  local name=clean(source.hardtext)
@@ -875,6 +905,10 @@ function T:render(ownName)
  for _,key in ipairs({'self','absent','ko','target','leader','sap','stamina'}) do tr[key]=PadUI:tr(key) end
  for _,v in ipairs(T.cards) do
   local m=v.member
+  if m and v.diagMemberKey~=m.key then
+   diagnostic('card activate begin','card='..v.slot..' member='..(m.self and 'self' or 'teammate'))
+   v.diagMemberKey=m.key
+  elseif not m then v.diagMemberKey=nil end
   changed(v.window,'active',m~=nil)
   if m then
    put(v,'window','locked',locked)
@@ -929,18 +963,29 @@ function T:step(force)
  elseif T.lastMode==mode then T:trackMovement(mode) end
  if force or T.lastTick~=tick then
   T.lastTick=tick;T.stats.polls=T.stats.polls+1
+  T.phase='collect'
   local members,rosterKey,sortKey=T:collect(ownName)
+  if rosterKey~=T.rosterKey then diagnostic('roster changed','members='..#members) end
   sortKey=mode..':'..T:sortMode()..':'..sortKey
   if sortKey~=T.sortKey and (not T.dragging or rosterKey~=T.rosterKey) then
    table.sort(members,less);T.ordered=members;T.sortKey=sortKey;T.stats.sorts=T.stats.sorts+1
   end
+  T.phase='bind'
   T:bind(T.ordered,rosterKey)
   local scale=db('UI:SAVE:PADUI:TEAM_SCALE')
   if scale<75 or scale>150 then scale=100 end
   scale=clamp(round(scale/25)*25,75,150)
+  T.phase='geometry'
   T:geometry(scale,clamp(db('UI:SAVE:PADUI:FONT_DELTA'),-1,1))
-  T:arrange(mode,sw,sh);T:render(ownName)
- elseif T.geometryKey then T:arrange(mode,sw,sh) end
+  T.phase='arrange'
+  T:arrange(mode,sw,sh)
+  T.phase='render'
+  T:render(ownName)
+ elseif T.geometryKey then
+  T.phase='arrange'
+  T:arrange(mode,sw,sh)
+ end
+ T.phase=nil
  return true
 end
 -- Failures are an explicit state, not an irreversible hidden-window latch.
@@ -967,7 +1012,8 @@ function T:fail(phase,err)
  pcall(function()
   if db(SAVE..'INIT')~=1 then T.pendingEnabled=T:isEnabled() end
  end)
- T.failed=tostring(err);T.failureActive=true;T.stableSince=nil
+ T.failed=(T.phase and ('['..T.phase..'] ') or '')..tostring(err)
+ T.phase=nil;T.failureActive=true;T.stableSince=nil
  local mouseOK,down=pcall(function() return getMouseDown and getMouseDown() end)
  T.discardRelease=T.discardRelease or (mouseOK and down==true) or false
  T.fatal=T.failed:find('TEAM_UI_STRUCTURE:',1,true)~=nil
@@ -1029,7 +1075,8 @@ function T:update(force)
   force=true
  end
  T.busy=true;T.initializing=not T.character
- local ok,result=pcall(T.step,T,force)
+ T.phase=nil
+ local ok,result=xpcall(function() return T:step(force) end,traceError)
  T.initializing=false;T.busy=false
  if not ok then T:fail('update',result);return end
  if result then
@@ -1051,7 +1098,7 @@ function T:start()
  if T.failed then return end -- repeated startup calls cannot bypass backoff
  if not T.sessionReady then T.createAttempted=false end
  T.sessionReady=true;T.busy=true;T.allowCreate=true;T.initializing=true
- local ok,err=pcall(T.initUI,T)
+ local ok,err=xpcall(function() return T:initUI() end,traceError)
  if ok then
   local settingsOK,settingsErr=pcall(T.installSettings,T)
   if not settingsOK then
