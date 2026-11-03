@@ -1030,7 +1030,10 @@ function T:fail(phase,err)
  end)
  pcall(debugInfo,'PadUI modular team ['..phase..', retry '..T.retryCount..'/3]: '..T.failed)
  if T.retryCount==0 or T.fatal or not T.retryAt then
-  pcall(displaySystemInfo,'PadUI Team: '..T.failed..' (native team fallback; toggle Team off/on to retry)','SYS')
+  -- Native system chat needs a short message; debugInfo keeps the full stack.
+  local brief=T.failed:match('^[^\r\n]*') or T.failed
+  if #brief>180 then brief=brief:sub(1,180)..'...' end
+  pcall(displaySystemInfo,'PadUI Team: '..brief..' (fallback; details in client log)','SYS')
  end
  pcall(T.refreshHealth,T)
  T.handlingFailure=false
