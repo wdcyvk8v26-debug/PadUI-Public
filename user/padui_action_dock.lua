@@ -438,3 +438,220 @@ function D:start()
     self.original=nil
     if getSetting("ENABLED",0)==1 then self:enable() end
 end
+
+
+-- Unified Dock 0.5 implementation.
+-- The original two group IDs remain because the Core4 client hardcodes both.
+-- We draw only the main container as the large 4-row visible shell; the ALT
+-- group is an unframed native control overlay. No client changes are required.
+local oldSkin = D.skin
+local oldGeometry = D.geometry
+local oldSaveOriginal = D.saveOriginal
+local oldResetGeometry = D.resetGeometry
+local oldDisable = D.disable
+
+function D:updatePageSelectors()
+    if not self.joined then return end
+    local isSync=getSetting("PAGE_SYNC",1)==1
+    set(MAIN .. ":select_memory","active",true)
+    set(ALT .. ":select_memory","active",false)
+    set(ALT .. ":select_memory_h","active",not isSync)
+    set(MAIN .. ":padui_dock_chrome:sync_indicator","active",isSync)
+end
+
+function D:skin(enabled)
+    oldSkin(self,enabled)
+    local mainChrome=MAIN .. ":padui_dock_chrome"
+    local altChrome=ALT .. ":header_closed:padui_dock_chrome"
+    set(altChrome,"active",false)
+    for _,id in ipairs({"unified_title","unified_seam","unified_subline",
+        "corner_tl_h","corner_tl_v","corner_tr_h","corner_tr_v",
+        "corner_bl_h","corner_bl_v","corner_br_h","corner_br_v"}) do
+        set(mainChrome .. ":" .. id,"active",enabled)
+    end
+    set(mainChrome .. ":branding","active",false)
+    set(mainChrome .. ":padui_mode","active",false)
+    set(mainChrome .. ":riv_l","active",false)
+    set(mainChrome .. ":riv_r","active",false)
+    set(altChrome .. ":branding","active",false)
+    set(altChrome .. ":padui_mode","active",false)
+    set(altChrome .. ":aux_label","active",false)
+    set(altChrome .. ":aux_caption","active",false)
+    if not enabled then
+        set(mainChrome .. ":sync_indicator","active",false)
+        return
+    end
+    local tint=style()
+    local sync=getSetting("PAGE_SYNC",1)==1
+    set(mainChrome .. ":unified_title","hardtext","PadUI   ACTION DOCK")
+    set(mainChrome .. ":unified_title","color",rgba(tint.accent,255))
+    set(mainChrome .. ":sync_indicator","color",rgba(tint.accent,235))
+    set(mainChrome .. ":sync_indicator","active",sync)
+    for _,id in ipairs({"line_top","line_bottom","line_left","line_right",
+        "unified_seam","unified_subline","corner_tl_h","corner_tl_v",
+        "corner_tr_h","corner_tr_v","corner_bl_h","corner_bl_v",
+        "corner_br_h","corner_br_v"}) do
+        set(mainChrome .. ":" .. id,"color",
+            rgba(tint.accent,id=="unified_seam" and 85 or 190))
+    end
+    set(mainChrome .. ":line_top","active",true)
+    set(mainChrome .. ":line_bottom","active",true)
+    -- Gold / teal beveled slot frames stay on both real groups.
+    self:updatePageSelectors()
+end
+
+function D:geometry()
+    if not self.joined then return end
+    -- Let the native geometry update the 20+20 genuine phrase controls first.
+    oldGeometry(self)
+    local pitch,w,hMain,hAlt=self:dimensions()
+    local total=hMain+hAlt
+    local chrome=MAIN .. ":padui_dock_chrome"
+    local side=getSetting("SIDE",BELOW)
+
+    -- Convert MAIN into the common visual 4x10 container. The hands group
+    -- retains its old centre relative to the upper/lower half after expansion.
+    set(MAIN,"w",w)
+    set(MAIN,"h",total)
+    set(MAIN .. ":header_closed","w",w-16)
+    set(MAIN .. ":header_closed","h",total)
+    set(MAIN .. ":hands","y",
+        side==BELOW and math.floor(hAlt/2) or -math.floor(hAlt/2))
+
+    set(chrome,"w",w)
+    set(chrome,"h",total)
+    set(chrome .. ":glass","w",w)
+    set(chrome .. ":glass","h",total)
+    set(chrome .. ":sheen","w",w-4)
+    set(chrome .. ":line_top","w",w-4)
+    set(chrome .. ":line_bottom","w",w-4)
+    set(chrome .. ":line_bottom","y",-total+2)
+    set(chrome .. ":line_left","h",total-4)
+    set(chrome .. ":line_right","x",w-2)
+    set(chrome .. ":line_right","h",total-4)
+    set(chrome .. ":line_inner","h",total-10)
+    set(chrome .. ":unified_seam","w",w-118)
+    set(chrome .. ":unified_seam","y",side==BELOW and -hMain or -hAlt)
+    set(chrome .. ":unified_subline","w",w-16)
+    set(chrome .. ":unified_subline","y",-total+8)
+    set(chrome .. ":sync_indicator","x",w-74)
+    for _,corner in ipairs({"tr","br"}) do
+        set(chrome .. ":corner_" .. corner .. "_h","x",w-25)
+        set(chrome .. ":corner_" .. corner .. "_v","x",w-5)
+    end
+    for _,corner in ipairs({"bl","br"}) do
+        set(chrome .. ":corner_" .. corner .. "_h","y",-total+5)
+        set(chrome .. ":corner_" .. corner .. "_v","y",-total+23)
+    end
+
+    -- The second container no longer has its own drag area, border or title.
+    -- Only its real native skill buttons and optional second page switch live.
+    set(ALT,"movable",false)
+    self:skin(true)
+    update(find(MAIN)); update(find(ALT))
+    self:sync("main")
+end
+
+function D:sync(source)
+    if not self.joined or self.moving then return end
+    local main,alt=find(MAIN),find(ALT)
+    if not main or not alt or not main.active or not alt.active then return end
+    self.moving=true
+    local ok,err=pcall(function()
+        update(main)
+        update(alt)
+        -- Match real slot positions, not window borders: these controls have
+        -- different internal container offsets in the native Ryzom XML.
+        local p=find(MAIN .. ":shortcuts:s0")
+        local q=find(ALT .. ":header_closed:shortcuts:s0")
+        if not p or not q then return end
+        local pitch=self:dimensions()
+        local delta=getSetting("SIDE",BELOW)==BELOW and -2*pitch or 2*pitch
+        local dx=num(p.x_real,0)-num(q.x_real,0)
+        local dy=num(p.y_real,0)+delta-num(q.y_real,0)
+        self:moveReal(alt,num(alt.x_real,num(alt.x,0))+dx,
+            num(alt.y_real,num(alt.y,0))+dy)
+    end)
+    self.moving=false
+    if not ok then self:log("unified slot alignment failed: "..tostring(err)) end
+end
+
+function D:saveOriginal(main,alt)
+    if getSetting("BACKUP_VALID",0)==0 then
+        saveSetting("SECOND_MOVABLE",alt.movable==false and 0 or 1)
+    end
+    oldSaveOriginal(self,main,alt)
+end
+
+function D:resetGeometry()
+    oldResetGeometry(self)
+    set(MAIN .. ":hands","y",0)
+end
+
+function D:disable()
+    local restoreMovable=getSetting("SECOND_MOVABLE",1)==1
+    local ok=oldDisable(self)
+    set(ALT,"movable",restoreMovable)
+    set(MAIN .. ":hands","y",0)
+    return ok
+end
+
+function D:joinBelow()
+    saveSetting("SIDE",BELOW)
+    if not self.joined then return self:enable() end
+    self:geometry()
+    return true
+end
+
+function D:joinAbove()
+    saveSetting("SIDE",ABOVE)
+    if not self.joined then return self:enable() end
+    self:geometry()
+    return true
+end
+
+-- This is intentionally a single draggable master. ALT remains a transparent
+-- overlay; native unexpected ALT movements are corrected, not propagated.
+function D:onAltMoved()
+    if self.joined then self:sync("main") end
+end
+
+-- Both Ryzom page leaves are 1-based. Their original XML <link> nodes still
+-- call phrase_select_memory / phrase_select_memory_2 for actual phrase updates.
+-- These two observers mirror the *database value* on changes (including binds).
+function D:matchPages(source)
+    if not self.joined or getSetting("PAGE_SYNC",1)~=1 or self.pageGuard then return end
+    local from=source=="alt" and "UI:PHRASE:SELECT_MEMORY_2" or "UI:PHRASE:SELECT_MEMORY"
+    local to=source=="alt" and "UI:PHRASE:SELECT_MEMORY" or "UI:PHRASE:SELECT_MEMORY_2"
+    local page=num(getDbProp(from),1)
+    if page<1 or page>10 or num(getDbProp(to),1)==page then return end
+    self.pageGuard=true
+    local ok,err=pcall(setDbProp,to,page)
+    self.pageGuard=false
+    if not ok then self:log("synchronized page change failed: "..tostring(err)) end
+end
+
+function D:onPrimaryPageChanged()
+    self:matchPages("main")
+end
+function D:onSecondaryPageChanged()
+    self:matchPages("alt")
+end
+
+function D:setPageSync(value)
+    local target=value and 1 or 0
+    saveSetting("PAGE_SYNC",target)
+    if not self.joined then return end
+    if target==1 then self:matchPages("main") end
+    self:updatePageSelectors()
+end
+
+local originalEnable=D.enable
+function D:enable()
+    local ok=originalEnable(self)
+    if ok and self.joined and getSetting("PAGE_SYNC",1)==1 then
+        self:matchPages("main")
+        self:updatePageSelectors()
+    end
+    return ok
+end
