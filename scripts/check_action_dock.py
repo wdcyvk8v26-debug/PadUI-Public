@@ -189,8 +189,10 @@ require('set(chrome .. ":branding","active",i==1)' in lua and
 require("setOnDraw(" not in lua, "No per-frame window mutation allowed")
 
 # Chrome is opt-in and does not modify the global rollover/opacity settings.
-require("CONTAINER_ROLLOVER_FACTOR" not in lua
-        and "CONTAINER_ALPHA" not in lua, "Global mouseover must not change")
+require('UI:SAVE:CONTAINER_ROLLOVER_FACTOR' not in lua and
+        'UI:SAVE:CONTAINER_ALPHA"' not in lua and
+        'UI:SAVE:CONTENT_ALPHA"' not in lua,
+        "Global mouseover and alpha settings must not change")
 require("PadUIActionDock:disable()" in xml, "No visible opt-out")
 
 print("PASS: XML parses, 20+20 original native phrase controls and bezels")
