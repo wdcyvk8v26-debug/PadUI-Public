@@ -129,6 +129,12 @@ eq(ensure(ALT..":header_closed:padui_dock_chrome").active,false,
    "There must be no second native backdrop")
 eq(ensure(MAIN..":padui_dock_chrome:unified_title").active,true,
    "Unified title must be visible")
+eq(main.options,"padui_unified_clean_layer",
+   "Main uses no native selection outline when joined")
+eq(alt.options,"padui_unified_clean_layer",
+   "ALT uses no native selection outline when joined")
+eq(ensure(MAIN..":padui_dock_chrome:unified_seam").active,false,
+   "No line may divide the four shortcut rows")
 eq(db[PAGE_ALT],db[PAGE_MAIN],"Join must synchronize existing page values")
 selectorCount(1)
 aligned(0)
@@ -194,6 +200,8 @@ eq(db[SAVE.."BACKUP_VALID"],0,"Original position backup cleared")
 eq(alt.x,620,"ALT original x restored")
 eq(alt.y,245,"ALT original y restored")
 eq(alt.movable,true,"ALT native drag restored")
+eq(main.options,"padui_action_layer","Native main focus frame restored")
+eq(alt.options,"padui_action_layer","Native ALT focus frame restored")
 eq(db[ALT_MODE],2,"Original ALT vertical orientation restored")
 eq(main.h,48,"Main native height restored")
 eq(ensure(MAIN..":hands").y,0,"Main hands native anchor restored")
