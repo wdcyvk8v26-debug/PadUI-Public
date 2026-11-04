@@ -1,174 +1,210 @@
--- Pure Lua 5.1 behavioral regression harness for PadUI Action Dock.
--- Not a renderer: tests drag coupling, top/bottom choices, persist/rollback.
-local ROOT = "ui:interface:"
-local MAIN = ROOT .. "gestionsets"
-local ALT = ROOT .. "gestionsets2"
-local SAVE = "UI:SAVE:PADUI:ACTION_DOCK:"
-local MODE = "UI:SAVE:GESTIONSETS2_MODE"
-local db = {[MODE]=2}
-local nodes = {}
+-- Ryzom Lua 5.1 behavior simulation for Unified Action Dock 0.5.
+-- It does not render real UI, but checks the two original widget paths,
+-- four-row slot alignment, one/two selectors, user-input page syncing and undo.
+local ROOT="ui:interface:"
+local MAIN=ROOT.."gestionsets"
+local ALT=ROOT.."gestionsets2"
+local MAIN_SLOT=MAIN..":shortcuts:s0"
+local ALT_SLOT=ALT..":header_closed:shortcuts:s0"
+local SAVE="UI:SAVE:PADUI:ACTION_DOCK:"
+local ALT_MODE="UI:SAVE:GESTIONSETS2_MODE"
+local PAGE_MAIN="UI:PHRASE:SELECT_MEMORY"
+local PAGE_ALT="UI:PHRASE:SELECT_MEMORY_2"
+local db={
+ [ALT_MODE]=2, [PAGE_MAIN]=3, [PAGE_ALT]=5,
+ [SAVE.."PAGE_SYNC"]=1, [SAVE.."SECOND_MOVABLE"]=1,
+ [SAVE.."SIDE"]=0
+}
+local nodes={}
+local D=nil
 local function widget(props)
     local w=props or {}
     function w:updateCoords()
-        self.x_real=self.x or 0
-        self.y_real=self.y or 0
+        if self.id==MAIN_SLOT then
+            local root=nodes[MAIN]
+            self.x_real=root.x+58+(self.x or 0)
+            self.y_real=root.y+root.h-20+(self.y or 0)
+        elseif self.id==ALT_SLOT then
+            local root=nodes[ALT]
+            self.x_real=root.x+86+(self.x or 0)
+            self.y_real=root.y+30+(self.y or 0)
+        else
+            self.x_real=self.x or 0
+            self.y_real=self.y or 0
+        end
         self.w_real=self.w or 0
         self.h_real=self.h or 0
     end
-    function w:setParentPos(other)
-        self.parentPos=other
-    end
-    function w:setPosRef(ref)
-        self.posref=ref
-    end
+    function w:setParentPos(other) self.parentPos=other end
+    function w:setPosRef(ref) self.posref=ref end
     w:updateCoords()
     return w
 end
-nodes[ROOT:sub(1,-2)] = widget({w=1920,h=1080})
-nodes[MAIN]=widget({x=128,y=330,w=410,h=48,active=false})
-nodes[ALT]=widget({x=620,y=245,w=68,h=300,active=true})
-local callbacks={}
+nodes[ROOT:sub(1,-2)]=widget({w=1920,h=1080})
+nodes[MAIN]=widget({x=128,y=330,w=410,h=48,active=false,movable=true})
+nodes[ALT]=widget({x=620,y=245,w=68,h=300,active=true,movable=true})
+local log={}
 local function ensure(path)
-    if nodes[path] then return nodes[path] end
-    local n=widget({active=true,w=24,h=24,x=0,y=0})
+    if nodes[path] then
+        nodes[path]:updateCoords()
+        return nodes[path]
+    end
+    local n=widget({active=true,w=24,h=24,x=0,y=0,id=path})
     if path:find("padui_dock_chrome",1,true) or
        path:find("padui_slot_chrome",1,true) then n.active=false end
     if path:find("padui_back",1,true) or
        path:find("padui_accent",1,true) then n.active=true end
     nodes[path]=n
+    n:updateCoords()
     return n
 end
 function getUI(path)
-    if not path:find(ROOT,1,true) and path~=ROOT:sub(1,-2) then
-        error("Unknown UI group path: " .. tostring(path))
-    end
+    assert(path:find(ROOT,1,true) or path==ROOT:sub(1,-2),
+        "invalid UI path: "..tostring(path))
     return ensure(path)
 end
 function getDbProp(key) return db[key] or 0 end
-function setDbProp(key,val) db[key]=val end
-function debugInfo(str) callbacks[#callbacks+1]=str end
+function setDbProp(key,value)
+    db[key]=value
+    -- Model callbacks queued by native XML link observers.
+    if D then
+        if key==PAGE_MAIN then D:onPrimaryPageChanged()
+        elseif key==PAGE_ALT then D:onSecondaryPageChanged() end
+    end
+end
+function debugInfo(message) log[#log+1]=message end
 function runAH(obj,kind,proc)
-    assert(kind=="proc", "Expected native proc call")
+    assert(kind=="proc","Native Ryzom proc expected")
+    local alt=nodes[ALT]
     if proc=="gestionsets2_proc_horiz" then
-        nodes[ALT].w=315
-        nodes[ALT].h=52
-    elseif proc=="gestionsets2_proc_vert" then
-        nodes[ALT].w=68
-        nodes[ALT].h=300
+        alt.w=315;alt.h=52
+        ensure(ALT..":select_memory_h").active=true
+        ensure(ALT..":select_memory").active=false
     elseif proc=="gestionsets2_proc_mode" then
-        if getDbProp(MODE)==1 then
-            nodes[ALT].w=315
-            nodes[ALT].h=52
+        if db[ALT_MODE]==1 then
+            alt.w=315;alt.h=52
+            ensure(ALT..":select_memory_h").active=true
+            ensure(ALT..":select_memory").active=false
         else
-            nodes[ALT].w=68
-            nodes[ALT].h=300
+            alt.w=68;alt.h=300
+            ensure(ALT..":select_memory_h").active=false
+            ensure(ALT..":select_memory").active=true
         end
     else
         error("Unexpected Ryzom proc: "..tostring(proc))
     end
 end
-game={InGameDbInitialized=true,castUpdateCount=0}
+game={InGameDbInitialized=true,castUpdates=0}
 function game:updateCurrentActionPosition()
-    self.castUpdateCount=self.castUpdateCount+1
+    self.castUpdates=self.castUpdates+1
 end
-
 dofile("user/padui_action_dock.lua")
-local D=PadUIActionDock
-
-local function eq(actual,expected,description)
-    assert(actual==expected,description..": "..tostring(actual)..
-        " instead of "..tostring(expected))
+D=PadUIActionDock
+local function eq(actual,expected,message)
+    assert(actual==expected,message..": got "..tostring(actual)..
+        "; expected "..tostring(expected))
 end
-local function attached(side)
-    local main,alt=nodes[MAIN],nodes[ALT]
-    eq(main.x_real,alt.x_real,"Dock horizontal alignment")
-    if side==0 then
-        eq(alt.y_real+alt.h_real,main.y_real,
-            "Second bar must touch below main bar")
-    else
-        eq(main.y_real+main.h_real,alt.y_real,
-            "Second bar must touch above main bar")
-    end
+local function aligned(side)
+    local p=getUI(MAIN_SLOT),q=getUI(ALT_SLOT)
+    local pitch=db[SAVE.."SPACING"]==1 and 36 or 28
+    eq(q.x_real,p.x_real,"All four rows share same first-column x")
+    eq(q.y_real,p.y_real+(side==0 and -2*pitch or 2*pitch),
+       "Actual native row 3 follows rows 1-2 without offset")
 end
--- Default below, still 20+20 native controls, no synthetic sheet creation.
-assert(D:joinBelow())
-eq(db[SAVE.."SIDE"],0,"Below placement saved")
-eq(db[SAVE.."ENABLED"],1,"Dock enabled")
-eq(nodes[MAIN].w,410,"Compact native overall width")
-attached(0)
-eq(db[SAVE.."SECOND_X"],620,"Original alt X saved")
-eq(db[SAVE.."SECOND_Y"],245,"Original alt Y saved")
+local function selectorCount(expected)
+    eq(ensure(MAIN..":select_memory").active,true,"Primary native selector")
+    eq(ensure(ALT..":select_memory_h").active,expected==2,
+       "Second native selector visibility")
+end
 
--- Moving MAIN must update ALT, including the original castbar callback.
+-- Test original 40 native slots are used through the standard Ryzom paths.
+assert(D:joinBelow(),"Joining unified dock failed")
 local main,alt=nodes[MAIN],nodes[ALT]
-main.x=main.x+47; main.y=main.y+24; main:updateCoords()
+eq(main.w,410,"Compact unified width")
+eq(main.h,144,"Master contains both two-row heights")
+eq(alt.movable,false,"Secondary native window not independently draggable")
+eq(ensure(MAIN..":padui_dock_chrome").active,true,
+   "The visual master backdrop is visible")
+eq(ensure(ALT..":header_closed:padui_dock_chrome").active,false,
+   "There must be no second native backdrop")
+eq(ensure(MAIN..":padui_dock_chrome:unified_title").active,true,
+   "Unified title must be visible")
+eq(db[PAGE_ALT],db[PAGE_MAIN],"Join must synchronize existing page values")
+selectorCount(1)
+aligned(0)
+
+-- Changing main page also changes the ALT page (including keyboard shortcut).
+setDbProp(PAGE_MAIN,6)
+eq(db[PAGE_ALT],6,"Synchronous main -> alt")
+setDbProp(PAGE_ALT,8)
+eq(db[PAGE_MAIN],8,"Synchronous alt -> main")
+
+-- With independent pages both page selectors exist, no db copying.
+D:setPageSync(false)
+selectorCount(2)
+setDbProp(PAGE_MAIN,4)
+eq(db[PAGE_ALT],8,"Independent pages should not be linked")
+setDbProp(PAGE_ALT,2)
+eq(db[PAGE_MAIN],4,"Independent alt should not move main")
+
+-- On synchronizing again, main page wins and only one switch is shown.
+D:setPageSync(true)
+selectorCount(1)
+eq(db[PAGE_ALT],4,"Restore synchronized pages")
+
+-- One master drag moves all 40 native slots.
+local originalX=main.x
+main.x=main.x+46;main.y=main.y+27;main:updateCoords()
 D:onMainMoved()
-attached(0)
-eq(main.x_real,175,"Main drag X")
-eq(main.y_real,354,"Main drag Y")
-assert(game.castUpdateCount>0,"Castbar position callback missing")
+aligned(0)
+eq(main.x,originalX+46,"Main drag persists")
+assert(game.castUpdates>0,"Native current-action callback still required")
 
--- Moving ALT must update MAIN (this was missing in 0.3).
-alt.x=alt.x-31; alt.y=alt.y+18; alt:updateCoords()
+-- Secondary window is an overlay, not an independent drag area.
+local masterX=main.x
+alt.x=alt.x-25;alt:updateCoords()
 D:onAltMoved()
-attached(0)
-eq(main.x_real,144,"Second bar drag moves main X")
-eq(main.y_real,372,"Second bar drag moves main Y")
+eq(main.x,masterX,"Overlay cannot drag master")
+aligned(0)
 
--- User can switch position without detaching or losing original memory data.
+-- Optional above positioning preserves a unified 4x10 grid.
 assert(D:joinAbove())
-eq(db[SAVE.."SIDE"],1,"Above placement saved")
-attached(1)
-main.x=main.x+20; main.y=main.y-40; main:updateCoords()
-D:onMainMoved()
-attached(1)
-alt.x=alt.x+40; alt.y=alt.y+15; alt:updateCoords()
-D:onAltMoved()
-attached(1)
-
--- The two scale modes actually change native UI frame geometry.
-D:setSpacing(1)
-eq(nodes[MAIN].w,490,"Wide overall width")
-eq(nodes[ALT].w,490,"Wide second width")
-eq(nodes[MAIN..":shortcuts:s9"].x,324,"Wide slot 10 x")
-attached(1)
-D:setTheme(2)
-eq(nodes[MAIN..":padui_dock_chrome:padui_mode"].hardtext,
-    "EMBER / 36","Status label updates")
-eq(nodes[ALT..":header_closed:padui_dock_chrome:branding"].active,
-    false,"Second titlebar must be hidden")
-eq(nodes[ALT..":header_closed:padui_dock_chrome:aux_label"].active,
-    false,"Large EXTRA label must be hidden")
-D:setGlass(2)
-eq(nodes[MAIN..":padui_dock_chrome:glass"].color,
-    "26 15 22 155","Glass transparency updates")
-
--- Moving to extreme top must clamp whole joined dock on-screen.
-main.y=1040; main:updateCoords()
-D:onMainMoved()
-attached(1)
-assert(alt.y_real+alt.h_real<=1080,"Joined dock exceeded screen top")
-
--- Detach: native bar mode, remembered independent position and activation.
-assert(D:disable())
-eq(db[SAVE.."ENABLED"],0,"Dock disabled")
-eq(db[SAVE.."BACKUP_VALID"],0,"Snapshot cleaned")
-eq(db[MODE],2,"Native vertical second bar restored")
-eq(alt.x,620,"Independent alt original X restored")
-eq(alt.y,245,"Independent alt original Y restored")
-eq(main.active,false,"Original main active state restored")
-eq(alt.active,true,"Original alt active state restored")
-eq(nodes[MAIN].w,410,"Main native width restored")
-eq(nodes[MAIN..":shortcuts:s10"].y,-26,
-    "Native 28x26 row geometry restored")
-local saveX=main.x
-alt.x=alt.x+12; alt:updateCoords(); D:onAltMoved()
-eq(main.x,saveX,"Detached bars move independently")
-
--- Saved preferences remain available when the user opts in again.
+eq(db[SAVE.."SIDE"],1,"Above choice saved")
+aligned(1)
 assert(D:joinBelow())
-attached(0)
-eq(db[SAVE.."SIDE"],0,"Below reselect")
+aligned(0)
+
+-- Width/theme/transparency change the actual master surface.
+D:setSpacing(1)
+eq(main.w,490,"36 px layout increases width")
+eq(main.h,176,"4x10 unified wide height")
+eq(ensure(MAIN..":shortcuts:s9").x,324,"10th real phrase slot spacing")
+aligned(0)
+D:setTheme(2)
+eq(ensure(MAIN..":padui_dock_chrome:unified_title").color,
+   "203 132 111 255","Copper theme tint")
+D:setGlass(2)
+eq(ensure(MAIN..":padui_dock_chrome:glass").color,
+   "26 15 22 155","Glass alpha update from native palette")
+
+-- Detaching restores native alternative vertical mode and original position.
 assert(D:disable())
-print("PASS: native 40-slot dock two-way dragging, below/above choices,")
-print("      wide spacing, theme, glass and exact independent-bar rollback")
+eq(db[SAVE.."ENABLED"],0,"Unified dock disabled")
+eq(db[SAVE.."BACKUP_VALID"],0,"Original position backup cleared")
+eq(alt.x,620,"ALT original x restored")
+eq(alt.y,245,"ALT original y restored")
+eq(alt.movable,true,"ALT native drag restored")
+eq(db[ALT_MODE],2,"Original ALT vertical orientation restored")
+eq(main.h,48,"Main native height restored")
+eq(ensure(MAIN..":hands").y,0,"Main hands native anchor restored")
+eq(main.active,false,"Main previous activation restored")
+eq(alt.active,true,"ALT previous activation restored")
+eq(ensure(MAIN..":shortcuts:s10").y,-26,"Main native row spacing restored")
+
+-- Preferences survive: rejoin in independent mode after saved settings.
+D:setPageSync(false)
+assert(D:joinBelow())
+selectorCount(2)
+assert(D:disable())
+print("PASS: unified visible master, 40 native slots, precise 4x10 alignment")
+print("      one/two real page selectors, two-way DB page syncing, drag and undo")
