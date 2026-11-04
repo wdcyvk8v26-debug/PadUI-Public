@@ -608,17 +608,20 @@ end
 function D:saveOriginal(main,alt)
     if getSetting("BACKUP_VALID",0)==0 then
         saveSetting("SECOND_MOVABLE",alt.movable==false and 0 or 1)
+        -- Store before mutating local ALT alpha. Ryzom persists native window
+        -- settings across relog, so an in-memory snapshot alone is unsafe.
+        saveSetting("ALT_GLOBAL_ALPHA",alt.use_global_alpha_settings==false and 0 or 1)
+        saveSetting("ALT_CONTAINER_ALPHA",num(alt.container_alpha,255))
+        saveSetting("ALT_CONTENT_ALPHA",num(alt.content_alpha,255))
     end
     oldSaveOriginal(self,main,alt)
     if self.original then
         local a=find(MAIN)
         self.original[MAIN .. ":options"]=a and a.options or "padui_action_layer"
         self.original[ALT .. ":options"]=alt.options or "padui_action_layer"
-        -- Snapshot only once per active dock session. These values are per
-        -- ALT window; no global alpha settings are changed.
-        self.original.alt_global_alpha=alt.use_global_alpha_settings
-        self.original.alt_container_alpha=tonumber(alt.container_alpha) or 255
-        self.original.alt_content_alpha=tonumber(alt.content_alpha) or 255
+        self.original.alt_global_alpha=getSetting("ALT_GLOBAL_ALPHA",1)==1
+        self.original.alt_container_alpha=getSetting("ALT_CONTAINER_ALPHA",255)
+        self.original.alt_content_alpha=getSetting("ALT_CONTENT_ALPHA",255)
     end
 end
 
