@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/action-dock-prototype-20261104
+      - feature/unified-action-dock-20261104
   pull_request:
     paths:
       - user/inventory.xml
