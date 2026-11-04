@@ -1,0 +1,26 @@
+name: PadUI Action Dock checks
+
+on:
+  push:
+    branches:
+      - feature/action-dock-prototype-20261104
+  pull_request:
+    paths:
+      - user/inventory.xml
+      - user/padui_action_dock.lua
+      - user/padui_core.lua
+      - scripts/check_action_dock.py
+  workflow_dispatch:
+
+jobs:
+  validate-action-dock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install Lua 5.1 syntax checker
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y lua5.1
+      - name: Verify native slots, anchors and XML layout
+        run: python3 scripts/check_action_dock.py
