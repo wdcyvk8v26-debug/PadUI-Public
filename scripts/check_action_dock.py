@@ -71,6 +71,14 @@ require(len(elements("view", "id", "padui_mode")) == 2,
         "Theme/spacing status labels missing")
 require(len(elements("view", "id", "aux_label")) == 1,
         "Legacy alt label must exist for reversible cosmetics")
+require(len(elements("view", "id", "unified_title")) == 1,
+        "Unified master title missing")
+require(len(elements("view", "id", "sync_indicator")) == 1,
+        "Linked page status missing")
+for corner in ("tl", "tr", "bl", "br"):
+    for segment in ("h", "v"):
+        require(len(elements("view", "id", f"corner_{corner}_{segment}")) == 1,
+                f"Missing master container corner {corner}_{segment}")
 for f in root.iter("view"):
     if f.get("id", "").startswith("frame"):
         require(f.get("global_color") in (None, "false", "true"),
@@ -84,7 +92,8 @@ for name in ["handl", "handr"]:
     require(len(hands) >= 1 and hands[0].get("dragable") == "true",
             f"Real weapon slot {name} unavailable")
 
-for action in ["dock_join", "dock_join_above", "dock_split", "dock_spacing_compact",
+for action in ["dock_join", "dock_join_above", "dock_split",
+               "dock_page_sync", "dock_page_async", "dock_spacing_compact",
                "dock_spacing_relaxed", "dock_glass_deep", "dock_glass_soft",
                "dock_glass_clear", "dock_theme_gold", "dock_theme_aether",
                "dock_theme_ember"]:
@@ -92,7 +101,8 @@ for action in ["dock_join", "dock_join_above", "dock_split", "dock_spacing_compa
 
 required_db = [
     "ENABLED", "BACKUP_VALID", "FIRST_ACTIVE", "SECOND_ACTIVE", "SECOND_X",
-    "SECOND_Y", "SECOND_MODE", "SPACING", "GLASS", "THEME", "SIDE",
+    "SECOND_Y", "SECOND_MODE", "SECOND_MOVABLE", "SPACING",
+    "GLASS", "THEME", "SIDE", "PAGE_SYNC",
 ]
 for name in required_db:
     require(len(elements("variable", "entry", f"UI:SAVE:PADUI:ACTION_DOCK:{name}")) == 1,
@@ -107,13 +117,31 @@ require("game:updateCurrentActionPosition()" in lua,
         "Native cast/current action positioning must be preserved")
 require("function D:onMainMoved()" in lua and
         "function D:onAltMoved()" in lua and
-        "self:sync(\"main\")" in lua and "self:sync(\"alt\")" in lua,
-        "Both-window drag propagation must be installed")
+        "self:sync(\"main\")" in lua,
+        "Master drag propagation must remain installed")
+require('set(ALT,"movable",false)' in lua,
+        "ALT window must not expose a second draggable native title")
+require('set(altChrome,"active",false)' in lua,
+        "A second visible container is not allowed in unified mode")
+require('set(MAIN .. ":hands","y",0)' in lua,
+        "Native hands group anchor must be reversible")
+require('function D:onPrimaryPageChanged()' in lua and
+        'function D:onSecondaryPageChanged()' in lua and
+        'function D:setPageSync(value)' in lua,
+        "Native 1/2 page-selectors and link callbacks are required")
+require(xml.count('params="PadUIActionDock:onPrimaryPageChanged()"') == 1,
+        "Primary DB page-link observer is missing")
+require(xml.count('params="PadUIActionDock:onSecondaryPageChanged()"') == 1,
+        "Secondary DB page-link observer is missing")
+require('UI:PHRASE:SELECT_MEMORY_2' in lua and
+        'UI:PHRASE:SELECT_MEMORY' in lua,
+        "Synchronous pages must keep the original memory DB paths")
 require('on_move="lua:PadUIActionDock:onAltMoved()"' in xml,
         "Second window must have a native Ryzom on_move callback")
 require('function D:joinBelow()' in lua and 'function D:joinAbove()' in lua,
         "Dock positioning above/below must be independently selectable")
-require('local GAP = 0' in lua, "Dock shells should have no vertical gap")
+require('local oldGeometry = D.geometry' in lua,
+        "Legacy native geometry must be preserved for fallback")
 require('self:placeSlots(mainGrid,pitch)' in lua and
         "for i=0,19 do" in lua and
         'set(MAIN .. ":shortcuts:s" .. i,"y",-math.floor(i/10)*26)' in lua,
@@ -135,9 +163,9 @@ require("CONTAINER_ROLLOVER_FACTOR" not in lua
         and "CONTAINER_ALPHA" not in lua, "Global mouseover must not change")
 require("PadUIActionDock:disable()" in xml, "No visible opt-out")
 
-print("PASS: XML parses, 20+20 native phrase controls and 160 bevel edges")
-print("      Both-window drag callbacks, bottom/top docking menus, saved")
-print("      settings and native layout restoration are present.")
+print("PASS: XML parses, 20+20 original native phrase controls and bezels")
+print("      4x10 master surface, one/two native page selectors, two DB")
+print("      observers, saved settings and original fallback are present.")
 
 compiler = shutil.which("luac5.1") or shutil.which("luac")
 if compiler:
