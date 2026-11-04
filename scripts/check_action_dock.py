@@ -85,6 +85,10 @@ require('self.original.alt_container_alpha' in lua and
         'self.original.alt_content_alpha' in lua and
         'self.original.alt_global_alpha' in lua,
         "ALT original alpha properties must be restored on split")
+require('saveSetting("ALT_CONTAINER_ALPHA"' in lua and
+        'saveSetting("ALT_CONTENT_ALPHA"' in lua and
+        'saveSetting("ALT_GLOBAL_ALPHA"' in lua,
+        "Original ALT alpha settings must be stored through relog")
 require(len(elements("group", "id", "padui_dock_chrome")) == 2, "Glass panels missing")
 require(len(elements("group", "id", "padui_slot_chrome")) == 2, "Slot panels missing")
 for i in range(20):
@@ -128,6 +132,7 @@ required_db = [
     "ENABLED", "BACKUP_VALID", "FIRST_ACTIVE", "SECOND_ACTIVE", "SECOND_X",
     "SECOND_Y", "SECOND_MODE", "SECOND_MOVABLE", "SPACING",
     "GLASS", "THEME", "SIDE", "PAGE_SYNC",
+    "ALT_GLOBAL_ALPHA", "ALT_CONTAINER_ALPHA", "ALT_CONTENT_ALPHA",
 ]
 for name in required_db:
     require(len(elements("variable", "entry", f"UI:SAVE:PADUI:ACTION_DOCK:{name}")) == 1,
