@@ -42,7 +42,8 @@ local function widget(props)
 end
 nodes[ROOT:sub(1,-2)]=widget({w=1920,h=1080})
 nodes[MAIN]=widget({x=128,y=330,w=410,h=48,active=false,movable=true})
-nodes[ALT]=widget({x=620,y=245,w=68,h=300,active=true,movable=true})
+nodes[ALT]=widget({x=620,y=245,w=68,h=300,active=true,movable=true,
+    use_global_alpha_settings=true,container_alpha=173,content_alpha=213})
 local log={}
 local function ensure(path)
     if nodes[path] then
@@ -133,6 +134,10 @@ eq(main.options,"padui_unified_clean_layer",
    "Main uses no native selection outline when joined")
 eq(alt.options,"padui_unified_clean_layer",
    "ALT uses no native selection outline when joined")
+eq(alt.use_global_alpha_settings,false,"ALT uses local opacity while joined")
+eq(alt.container_alpha,0,"ALT native window border fully transparent")
+eq(alt.content_alpha,255,"ALT real skill contents remain fully visible")
+eq(alt.active,true,"ALT mouseable native window remains active")
 eq(ensure(MAIN..":padui_dock_chrome:unified_seam").active,false,
    "No line may divide the four shortcut rows")
 eq(db[PAGE_ALT],db[PAGE_MAIN],"Join must synchronize existing page values")
@@ -202,6 +207,9 @@ eq(alt.y,245,"ALT original y restored")
 eq(alt.movable,true,"ALT native drag restored")
 eq(main.options,"padui_action_layer","Native main focus frame restored")
 eq(alt.options,"padui_action_layer","Native ALT focus frame restored")
+eq(alt.use_global_alpha_settings,true,"ALT original global-alpha setting restored")
+eq(alt.container_alpha,173,"ALT original container-alpha restored")
+eq(alt.content_alpha,213,"ALT original content-alpha restored")
 eq(db[ALT_MODE],2,"Original ALT vertical orientation restored")
 eq(main.h,48,"Main native height restored")
 eq(ensure(MAIN..":hands").y,0,"Main hands native anchor restored")
