@@ -10,6 +10,7 @@ on:
       - user/padui_action_dock.lua
       - user/padui_core.lua
       - scripts/check_action_dock.py
+      - scripts/test_action_dock.lua
   workflow_dispatch:
 
 jobs:
@@ -22,5 +23,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y lua5.1
-      - name: Verify native slots, anchors and XML layout
+      - name: Verify native slots, XML geometry and Lua 5.1 syntax
         run: python3 scripts/check_action_dock.py
+      - name: Test two-way docking, above/below and rollback
+        run: lua5.1 scripts/test_action_dock.lua
