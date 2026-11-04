@@ -469,6 +469,25 @@ function D:skin(enabled)
         local fallback=original and original[p .. ":options"] or "padui_action_layer"
         set(p,"options",enabled and "padui_unified_clean_layer" or fallback)
     end
+    -- Core4 CGroupContainer::draw() multiplies *native frame* alpha by
+    -- container_alpha. The skills are children rendered with content_alpha.
+    -- Only make ALT's native window fully transparent, NOT the ALT window
+    -- itself (which must stay active and on win_priority 4 for mouse input).
+    if enabled then
+        set(ALT,"use_global_alpha_settings",false)
+        set(ALT,"container_alpha",0)
+        set(ALT,"content_alpha",255)
+    else
+        local orig=self.original
+        if orig then
+            set(ALT,"container_alpha",orig.alt_container_alpha)
+            set(ALT,"content_alpha",orig.alt_content_alpha)
+            set(ALT,"use_global_alpha_settings",orig.alt_global_alpha)
+        else
+            -- Defensive fallback for incomplete session snapshots.
+            set(ALT,"use_global_alpha_settings",true)
+        end
+    end
     local mainChrome=MAIN .. ":padui_dock_chrome"
     local altChrome=ALT .. ":header_closed:padui_dock_chrome"
     set(altChrome,"active",false)
@@ -595,6 +614,11 @@ function D:saveOriginal(main,alt)
         local a=find(MAIN)
         self.original[MAIN .. ":options"]=a and a.options or "padui_action_layer"
         self.original[ALT .. ":options"]=alt.options or "padui_action_layer"
+        -- Snapshot only once per active dock session. These values are per
+        -- ALT window; no global alpha settings are changed.
+        self.original.alt_global_alpha=alt.use_global_alpha_settings
+        self.original.alt_container_alpha=tonumber(alt.container_alpha) or 255
+        self.original.alt_content_alpha=tonumber(alt.content_alpha) or 255
     end
 end
 
