@@ -511,102 +511,102 @@
     <group id="shortcuts" x="-8" w="278" h="52" posparent="hands" posref="MM MM">
       <group id="padui_slot_chrome" posref="TL TL" x="0" y="0" w="278" h="52" active="false">
         <!-- Native spell controls stay siblings, with original IDs and actions. -->
-        <view type="bitmap" id="frame0" posref="TL TL" x="-1" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame0" posref="TL TL" x="-1" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top0" posref="TL TL" x="-1" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left0" posref="TL TL" x="-1" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right0" posref="TL TL" x="24" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom0" posref="TL TL" x="-1" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame1" posref="TL TL" x="27" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame1" posref="TL TL" x="27" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top1" posref="TL TL" x="27" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left1" posref="TL TL" x="27" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right1" posref="TL TL" x="52" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom1" posref="TL TL" x="27" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame2" posref="TL TL" x="55" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame2" posref="TL TL" x="55" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top2" posref="TL TL" x="55" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left2" posref="TL TL" x="55" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right2" posref="TL TL" x="80" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom2" posref="TL TL" x="55" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame3" posref="TL TL" x="83" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame3" posref="TL TL" x="83" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top3" posref="TL TL" x="83" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left3" posref="TL TL" x="83" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right3" posref="TL TL" x="108" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom3" posref="TL TL" x="83" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame4" posref="TL TL" x="111" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame4" posref="TL TL" x="111" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top4" posref="TL TL" x="111" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left4" posref="TL TL" x="111" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right4" posref="TL TL" x="136" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom4" posref="TL TL" x="111" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame5" posref="TL TL" x="139" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame5" posref="TL TL" x="139" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top5" posref="TL TL" x="139" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left5" posref="TL TL" x="139" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right5" posref="TL TL" x="164" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom5" posref="TL TL" x="139" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame6" posref="TL TL" x="167" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame6" posref="TL TL" x="167" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top6" posref="TL TL" x="167" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left6" posref="TL TL" x="167" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right6" posref="TL TL" x="192" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom6" posref="TL TL" x="167" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame7" posref="TL TL" x="195" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame7" posref="TL TL" x="195" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top7" posref="TL TL" x="195" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left7" posref="TL TL" x="195" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right7" posref="TL TL" x="220" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom7" posref="TL TL" x="195" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame8" posref="TL TL" x="223" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame8" posref="TL TL" x="223" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top8" posref="TL TL" x="223" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left8" posref="TL TL" x="223" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right8" posref="TL TL" x="248" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom8" posref="TL TL" x="223" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame9" posref="TL TL" x="251" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame9" posref="TL TL" x="251" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top9" posref="TL TL" x="251" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left9" posref="TL TL" x="251" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right9" posref="TL TL" x="276" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom9" posref="TL TL" x="251" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame10" posref="TL TL" x="-1" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame10" posref="TL TL" x="-1" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top10" posref="TL TL" x="-1" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left10" posref="TL TL" x="-1" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right10" posref="TL TL" x="24" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom10" posref="TL TL" x="-1" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame11" posref="TL TL" x="27" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame11" posref="TL TL" x="27" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top11" posref="TL TL" x="27" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left11" posref="TL TL" x="27" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right11" posref="TL TL" x="52" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom11" posref="TL TL" x="27" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame12" posref="TL TL" x="55" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame12" posref="TL TL" x="55" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top12" posref="TL TL" x="55" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left12" posref="TL TL" x="55" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right12" posref="TL TL" x="80" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom12" posref="TL TL" x="55" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame13" posref="TL TL" x="83" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame13" posref="TL TL" x="83" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top13" posref="TL TL" x="83" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left13" posref="TL TL" x="83" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right13" posref="TL TL" x="108" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom13" posref="TL TL" x="83" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame14" posref="TL TL" x="111" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame14" posref="TL TL" x="111" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top14" posref="TL TL" x="111" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left14" posref="TL TL" x="111" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right14" posref="TL TL" x="136" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom14" posref="TL TL" x="111" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame15" posref="TL TL" x="139" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame15" posref="TL TL" x="139" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top15" posref="TL TL" x="139" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left15" posref="TL TL" x="139" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right15" posref="TL TL" x="164" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom15" posref="TL TL" x="139" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame16" posref="TL TL" x="167" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame16" posref="TL TL" x="167" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top16" posref="TL TL" x="167" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left16" posref="TL TL" x="167" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right16" posref="TL TL" x="192" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom16" posref="TL TL" x="167" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame17" posref="TL TL" x="195" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame17" posref="TL TL" x="195" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top17" posref="TL TL" x="195" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left17" posref="TL TL" x="195" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right17" posref="TL TL" x="220" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom17" posref="TL TL" x="195" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame18" posref="TL TL" x="223" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame18" posref="TL TL" x="223" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top18" posref="TL TL" x="223" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left18" posref="TL TL" x="223" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right18" posref="TL TL" x="248" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom18" posref="TL TL" x="223" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame19" posref="TL TL" x="251" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame19" posref="TL TL" x="251" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top19" posref="TL TL" x="251" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left19" posref="TL TL" x="251" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right19" posref="TL TL" x="276" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
@@ -662,6 +662,7 @@
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SPACING" type="sint32" value="0" />
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:GLASS" type="sint32" value="1" />
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:THEME" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SIDE" type="sint32" value="0" />
   <proc id="gestionsets2_proc_active">
     <action handler="set" params="dblink=UI:VARIABLES:ISACTIVE:SETS2|value=1" />
     <action handler="proc" params="gestionsets2_proc_mode" />
@@ -788,7 +789,8 @@
     <action handler="set" params="target='ui:interface:gestionsets2_menu:disable_dragdrop:active'|value=@UI:SAVE:GESTIONSETS2:DRAGDROP" />
   </proc>
   <group type="menu" id="gestionsets_menu" extends="base_menu_with_color">
-    <action id="dock_join" name="PadUI · Leisten verbinden" handler="lua" params="PadUIActionDock:enable()" />
+    <action id="dock_join" name="PadUI · Verbinden (Zusatz unten)" handler="lua" params="PadUIActionDock:joinBelow()" />
+    <action id="dock_join_above" name="PadUI · Verbinden (Zusatz oben)" handler="lua" params="PadUIActionDock:joinAbove()" />
     <action id="dock_split" name="PadUI · Leisten trennen" handler="lua" params="PadUIActionDock:disable()" />
     <separator />
     <action id="dock_spacing_compact" name="PadUI · Kompakt (28 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(0)" />
@@ -807,7 +809,8 @@
     <separator />
   </group>
   <group type="menu" id="gestionsets2_menu" extends="base_menu_with_color">
-    <action id="dock_join" name="PadUI · Leisten verbinden" handler="lua" params="PadUIActionDock:enable()" />
+    <action id="dock_join" name="PadUI · Verbinden (Zusatz unten)" handler="lua" params="PadUIActionDock:joinBelow()" />
+    <action id="dock_join_above" name="PadUI · Verbinden (Zusatz oben)" handler="lua" params="PadUIActionDock:joinAbove()" />
     <action id="dock_split" name="PadUI · Leisten trennen" handler="lua" params="PadUIActionDock:disable()" />
     <separator />
     <action id="dock_spacing_compact" name="PadUI · Kompakt (28 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(0)" />
@@ -828,7 +831,7 @@
     <action id="vert" name="uiVertical" handler="proc" params="gestionsets2_proc_set|%gestionsets_v" />
     <separator />
   </group>
-  <group type="container" id="gestionsets2" w="68" h="300" resizer="false" header_active="false" right_button="false" group_onclick_r="active_menu" group_params_r="menu=ui:interface:gestionsets2_menu" movable="true" active="true" opened="false" openable="false" global_color="false" header_color="UI:SAVE:WIN:COLORS:INV" locked="true" on_active="proc" on_active_params="gestionsets2_proc_active" on_deactive="set" on_deactive_params="dblink=UI:VARIABLES:ISACTIVE:SETS2|value=0" help_page="interf_action_bar.html" options="padui_action_layer" global_color_over="false">
+  <group type="container" id="gestionsets2" w="68" h="300" resizer="false" header_active="false" right_button="false" group_onclick_r="active_menu" group_params_r="menu=ui:interface:gestionsets2_menu" movable="true" active="true" opened="false" openable="false" global_color="false" header_color="UI:SAVE:WIN:COLORS:INV" locked="true" on_active="proc" on_active_params="gestionsets2_proc_active" on_deactive="set" on_deactive_params="dblink=UI:VARIABLES:ISACTIVE:SETS2|value=0" help_page="interf_action_bar.html" on_move="lua:PadUIActionDock:onAltMoved()" options="padui_action_layer" global_color_over="false">
     <view type="bitmap" id="padui_back" posref="TL TL" texture="blank.tga" scale="true" global_color="false" sizeref="wh" w="0" h="0" color="12 18 24 200" render_layer="-1" inherit_gc_alpha="false" />
     <view type="bitmap" id="padui_accent" posref="TL TL" texture="blank.tga" scale="true" global_color="false" sizeref="w" w="0" h="2" color="25 145 140 150" render_layer="-1" inherit_gc_alpha="false" />
     <group id="header_closed" x="0" y="0" w="68" h="300" posref="TL TL">
@@ -841,7 +844,7 @@
         <view type="bitmap" id="line_left" posref="TL TL" x="2" y="-2" w="1" h="60" texture="blank.tga" scale="true" global_color="false" color="191 148 86 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="line_right" posref="TL TL" x="408" y="-2" w="1" h="60" texture="blank.tga" scale="true" global_color="false" color="191 148 86 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="line_inner" posref="TL TL" x="4" y="-5" w="1" h="54" texture="blank.tga" scale="true" global_color="false" color="58 102 108 122" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="text" id="branding" posref="TL TL" x="9" y="-5" fontsize="8" shadow="true" global_color="false" color="112 210 202 255" hardtext="ALT" render_layer="1" />
+        <view type="text" id="branding" posref="TL TL" x="9" y="-5" fontsize="8" shadow="true" global_color="false" color="112 210 202 255" hardtext="" render_layer="1" />
         <view type="text" id="aux_label" posref="TL TL" x="22" y="-27" fontsize="17" shadow="true" global_color="false" color="110 202 205 255" hardtext="II" render_layer="1" />
         <view type="text" id="aux_caption" posref="TL TL" x="12" y="-49" fontsize="8" shadow="true" global_color="false" color="110 202 205 230" hardtext="EXTRA" render_layer="1" />
         <view type="text" id="padui_mode" posref="TL TL" x="304" y="-4" fontsize="8" shadow="true" global_color="false" color="222 190 127 255" hardtext="GOLD / 28" render_layer="1" />
@@ -851,102 +854,102 @@
       <group id="shortcuts" y="-1" w="68" h="300" posref="TL TL">
       <group id="padui_slot_chrome" posref="TL TL" x="0" y="0" w="278" h="52" active="false">
         <!-- Native spell controls stay siblings, with original IDs and actions. -->
-        <view type="bitmap" id="frame0" posref="TL TL" x="-1" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame0" posref="TL TL" x="-1" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top0" posref="TL TL" x="-1" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left0" posref="TL TL" x="-1" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right0" posref="TL TL" x="24" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom0" posref="TL TL" x="-1" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame1" posref="TL TL" x="27" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame1" posref="TL TL" x="27" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top1" posref="TL TL" x="27" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left1" posref="TL TL" x="27" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right1" posref="TL TL" x="52" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom1" posref="TL TL" x="27" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame2" posref="TL TL" x="55" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame2" posref="TL TL" x="55" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top2" posref="TL TL" x="55" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left2" posref="TL TL" x="55" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right2" posref="TL TL" x="80" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom2" posref="TL TL" x="55" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame3" posref="TL TL" x="83" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame3" posref="TL TL" x="83" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top3" posref="TL TL" x="83" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left3" posref="TL TL" x="83" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right3" posref="TL TL" x="108" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom3" posref="TL TL" x="83" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame4" posref="TL TL" x="111" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame4" posref="TL TL" x="111" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top4" posref="TL TL" x="111" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left4" posref="TL TL" x="111" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right4" posref="TL TL" x="136" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom4" posref="TL TL" x="111" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame5" posref="TL TL" x="139" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame5" posref="TL TL" x="139" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top5" posref="TL TL" x="139" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left5" posref="TL TL" x="139" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right5" posref="TL TL" x="164" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom5" posref="TL TL" x="139" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame6" posref="TL TL" x="167" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame6" posref="TL TL" x="167" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top6" posref="TL TL" x="167" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left6" posref="TL TL" x="167" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right6" posref="TL TL" x="192" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom6" posref="TL TL" x="167" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame7" posref="TL TL" x="195" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame7" posref="TL TL" x="195" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top7" posref="TL TL" x="195" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left7" posref="TL TL" x="195" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right7" posref="TL TL" x="220" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom7" posref="TL TL" x="195" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame8" posref="TL TL" x="223" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame8" posref="TL TL" x="223" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top8" posref="TL TL" x="223" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left8" posref="TL TL" x="223" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right8" posref="TL TL" x="248" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom8" posref="TL TL" x="223" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame9" posref="TL TL" x="251" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame9" posref="TL TL" x="251" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top9" posref="TL TL" x="251" y="1" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left9" posref="TL TL" x="251" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right9" posref="TL TL" x="276" y="1" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="222 180 109 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom9" posref="TL TL" x="251" y="-24" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="222 180 109 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame10" posref="TL TL" x="-1" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame10" posref="TL TL" x="-1" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top10" posref="TL TL" x="-1" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left10" posref="TL TL" x="-1" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right10" posref="TL TL" x="24" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom10" posref="TL TL" x="-1" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame11" posref="TL TL" x="27" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame11" posref="TL TL" x="27" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top11" posref="TL TL" x="27" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left11" posref="TL TL" x="27" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right11" posref="TL TL" x="52" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom11" posref="TL TL" x="27" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame12" posref="TL TL" x="55" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame12" posref="TL TL" x="55" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top12" posref="TL TL" x="55" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left12" posref="TL TL" x="55" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right12" posref="TL TL" x="80" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom12" posref="TL TL" x="55" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame13" posref="TL TL" x="83" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame13" posref="TL TL" x="83" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top13" posref="TL TL" x="83" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left13" posref="TL TL" x="83" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right13" posref="TL TL" x="108" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom13" posref="TL TL" x="83" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame14" posref="TL TL" x="111" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame14" posref="TL TL" x="111" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top14" posref="TL TL" x="111" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left14" posref="TL TL" x="111" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right14" posref="TL TL" x="136" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom14" posref="TL TL" x="111" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame15" posref="TL TL" x="139" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame15" posref="TL TL" x="139" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top15" posref="TL TL" x="139" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left15" posref="TL TL" x="139" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right15" posref="TL TL" x="164" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom15" posref="TL TL" x="139" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame16" posref="TL TL" x="167" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame16" posref="TL TL" x="167" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top16" posref="TL TL" x="167" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left16" posref="TL TL" x="167" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right16" posref="TL TL" x="192" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom16" posref="TL TL" x="167" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame17" posref="TL TL" x="195" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame17" posref="TL TL" x="195" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top17" posref="TL TL" x="195" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left17" posref="TL TL" x="195" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right17" posref="TL TL" x="220" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom17" posref="TL TL" x="195" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame18" posref="TL TL" x="223" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame18" posref="TL TL" x="223" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top18" posref="TL TL" x="223" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left18" posref="TL TL" x="223" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right18" posref="TL TL" x="248" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_bottom18" posref="TL TL" x="223" y="-52" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 90" render_layer="-1" inherit_gc_alpha="false" />
-        <view type="bitmap" id="frame19" posref="TL TL" x="251" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="17 26 35 210" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame19" posref="TL TL" x="251" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_top19" posref="TL TL" x="251" y="-27" w="26" h="1" texture="blank.tga" scale="true" global_color="false" color="108 195 192 220" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_left19" posref="TL TL" x="251" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 195" render_layer="-1" inherit_gc_alpha="false" />
         <view type="bitmap" id="edge_right19" posref="TL TL" x="276" y="-27" w="1" h="26" texture="blank.tga" scale="true" global_color="false" color="108 195 192 95" render_layer="-1" inherit_gc_alpha="false" />
