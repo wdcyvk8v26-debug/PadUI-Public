@@ -494,6 +494,19 @@
         <view type="text" id="padui_mode" posref="TL TL" x="304" y="-4" fontsize="8" shadow="true" global_color="false" color="222 190 127 255" hardtext="GOLD / 28" render_layer="1" />
         <view type="bitmap" id="riv_l" posref="TL TL" x="5" y="-5" w="3" h="3" texture="blank.tga" scale="true" global_color="false" color="224 185 108 255" render_layer="1" inherit_gc_alpha="false" />
         <view type="bitmap" id="riv_r" posref="TL TL" x="401" y="-5" w="3" h="3" texture="blank.tga" scale="true" global_color="false" color="224 185 108 255" render_layer="1" inherit_gc_alpha="false" />
+        <!-- 0.5: single master shell, 4 rows, purely native blank-texture trims. -->
+        <view type="text" id="unified_title" posref="TL TL" x="13" y="-8" fontsize="9" shadow="true" global_color="false" color="216 175 109 255" hardtext="PadUI   ACTION DOCK" render_layer="2" active="false" />
+        <view type="text" id="sync_indicator" posref="TL TL" x="340" y="-8" fontsize="8" shadow="true" global_color="false" color="216 175 109 220" hardtext="SYNC" render_layer="2" active="false" />
+        <view type="bitmap" id="unified_seam" posref="TL TL" x="59" y="-72" w="290" h="1" texture="blank.tga" scale="true" global_color="false" color="216 175 109 75" render_layer="1" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="unified_subline" posref="TL TL" x="8" y="-136" w="394" h="1" texture="blank.tga" scale="true" global_color="false" color="216 175 109 120" render_layer="1" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="corner_tl_h" posref="TL TL" x="4" y="-4" w="22" h="3" texture="blank.tga" scale="true" global_color="false" color="216 175 109 190" render_layer="2" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="corner_tl_v" posref="TL TL" x="4" y="-4" w="3" h="20" texture="blank.tga" scale="true" global_color="false" color="216 175 109 190" render_layer="2" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="corner_tr_h" posref="TL TL" x="385" y="-4" w="22" h="3" texture="blank.tga" scale="true" global_color="false" color="216 175 109 190" render_layer="2" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="corner_tr_v" posref="TL TL" x="405" y="-4" w="3" h="20" texture="blank.tga" scale="true" global_color="false" color="216 175 109 190" render_layer="2" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="corner_bl_h" posref="TL TL" x="4" y="-139" w="22" h="3" texture="blank.tga" scale="true" global_color="false" color="216 175 109 190" render_layer="2" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="corner_bl_v" posref="TL TL" x="4" y="-119" w="3" h="20" texture="blank.tga" scale="true" global_color="false" color="216 175 109 190" render_layer="2" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="corner_br_h" posref="TL TL" x="385" y="-139" w="22" h="3" texture="blank.tga" scale="true" global_color="false" color="216 175 109 190" render_layer="2" inherit_gc_alpha="false" active="false" />
+        <view type="bitmap" id="corner_br_v" posref="TL TL" x="405" y="-119" w="3" h="20" texture="blank.tga" scale="true" global_color="false" color="216 175 109 190" render_layer="2" inherit_gc_alpha="false" active="false" />
       </group>
     <group id="header_closed" x="0" y="0" h="48" w="394" posref="TL TL" />
     <group id="hands" x="9" y="0" w="392" h="68" posref="ML ML" setnumber="1">
@@ -645,6 +658,7 @@
       <ctrl type="button" id="arrow_down" button_type="push_button" posref="BR BR" x="-2" y="6" tx_normal="W_arrow_down_1.tga" tx_pushed="W_arrow_down_1.tga" tx_over="W_button_12_over.tga" tooltip="uittHandSet" tooltip_parent="win" color="245 235 210 255" col_over="110 235 225 255" col_pushed="110 235 225 255" global_color="false" />
     </group>
     <link expr="@UI:PHRASE:SELECT_MEMORY" action="phrase_select_memory" params="value=add(@UI:PHRASE:SELECT_MEMORY,-1)" />
+    <link expr="@UI:PHRASE:SELECT_MEMORY" action="lua" params="PadUIActionDock:onPrimaryPageChanged()" />
   </group>
   <tree node="gestionsets" />
   <define id="gestionsets_h" value="1" />
@@ -663,6 +677,8 @@
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:GLASS" type="sint32" value="1" />
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:THEME" type="sint32" value="0" />
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SIDE" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:PAGE_SYNC" type="sint32" value="1" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SECOND_MOVABLE" type="sint32" value="1" />
   <proc id="gestionsets2_proc_active">
     <action handler="set" params="dblink=UI:VARIABLES:ISACTIVE:SETS2|value=1" />
     <action handler="proc" params="gestionsets2_proc_mode" />
@@ -793,6 +809,9 @@
     <action id="dock_join_above" name="PadUI · Verbinden (Zusatz oben)" handler="lua" params="PadUIActionDock:joinAbove()" />
     <action id="dock_split" name="PadUI · Leisten trennen" handler="lua" params="PadUIActionDock:disable()" />
     <separator />
+    <action id="dock_page_sync" name="PadUI · Seiten: Synchron (1 Schalter)" handler="lua" params="PadUIActionDock:setPageSync(true)" />
+    <action id="dock_page_async" name="PadUI · Seiten: Unabhaengig (2 Schalter)" handler="lua" params="PadUIActionDock:setPageSync(false)" />
+    <separator />
     <action id="dock_spacing_compact" name="PadUI · Kompakt (28 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(0)" />
     <action id="dock_spacing_relaxed" name="PadUI · Weit (36 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(1)" />
     <separator />
@@ -812,6 +831,9 @@
     <action id="dock_join" name="PadUI · Verbinden (Zusatz unten)" handler="lua" params="PadUIActionDock:joinBelow()" />
     <action id="dock_join_above" name="PadUI · Verbinden (Zusatz oben)" handler="lua" params="PadUIActionDock:joinAbove()" />
     <action id="dock_split" name="PadUI · Leisten trennen" handler="lua" params="PadUIActionDock:disable()" />
+    <separator />
+    <action id="dock_page_sync" name="PadUI · Seiten: Synchron (1 Schalter)" handler="lua" params="PadUIActionDock:setPageSync(true)" />
+    <action id="dock_page_async" name="PadUI · Seiten: Unabhaengig (2 Schalter)" handler="lua" params="PadUIActionDock:setPageSync(false)" />
     <separator />
     <action id="dock_spacing_compact" name="PadUI · Kompakt (28 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(0)" />
     <action id="dock_spacing_relaxed" name="PadUI · Weit (36 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(1)" />
@@ -990,6 +1012,7 @@
       <ctrl type="button" id="arrow_down" button_type="push_button" posref="BM TM" posparent="slot_number" x="0" y="0" tx_normal="W_arrow_down_1.tga" tx_pushed="W_arrow_down_1.tga" tx_over="W_button_12_over.tga" tooltip="uittHandSet" tooltip_parent="win" color="245 235 210 255" col_over="110 235 225 255" col_pushed="110 235 225 255" global_color="false" />
     </group>
     <link expr="@UI:PHRASE:SELECT_MEMORY_2" action="phrase_select_memory_2" params="value=add(@UI:PHRASE:SELECT_MEMORY_2,-1)" />
+    <link expr="@UI:PHRASE:SELECT_MEMORY_2" action="lua" params="PadUIActionDock:onSecondaryPageChanged()" />
     <link expr="depends(@UI:SAVE:GESTIONSETS2_MODE)" action="proc" params="gestionsets_proc_mode" />
     <link expr="depends(@UI:SAVE:GESTIONSETS:DRAGDROP)" action="proc" params="proc_gestionsets_menu_iconlock" />
     <link expr="depends(@UI:SAVE:GESTIONSETS2:DRAGDROP)" action="proc" params="proc_gestionsets2_menu_iconlock" />
