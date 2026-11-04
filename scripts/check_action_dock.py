@@ -60,6 +60,18 @@ for template in [main_template[0], alt_template[0]]:
 
 require(len(elements("group", "id", "gestionsets")) == 1, "Main window changed")
 require(len(elements("group", "id", "gestionsets2")) == 1, "Alt window changed")
+# Unified mode uses two *logical* Ryzom windows with one visible background.
+# Since the MASTER is four rows tall it would otherwise obscure/mouse-block
+# real ALT controls. In Core4 window drawing and input are priority ordered:
+# NORMAL=3 for the master, HIGH=4 for the ALT overlay.
+main_window = elements("group", "id", "gestionsets")[0]
+alt_window = elements("group", "id", "gestionsets2")[0]
+require(alt_window.get("win_priority") == "4",
+        "ALT must render and hit-test above the unified master (priority 4)")
+require(int(main_window.get("win_priority", "3")) < int(alt_window.get("win_priority")),
+        "MASTER priority must remain below ALT overlay")
+require(alt_window.get("active") == "true",
+        "ALT native controls must stay active for hit testing")
 require(len(elements("group", "id", "padui_dock_chrome")) == 2, "Glass panels missing")
 require(len(elements("group", "id", "padui_slot_chrome")) == 2, "Slot panels missing")
 for i in range(20):
@@ -165,7 +177,7 @@ require("PadUIActionDock:disable()" in xml, "No visible opt-out")
 
 print("PASS: XML parses, 20+20 original native phrase controls and bezels")
 print("      4x10 master surface, one/two native page selectors, two DB")
-print("      observers, saved settings and original fallback are present.")
+print("      observers, HIGH-priority clickable ALT overlay and fallback pass.")
 
 compiler = shutil.which("luac5.1") or shutil.which("luac")
 if compiler:
