@@ -1,54 +1,71 @@
-# PadUI-Public: Action Dock 0.3 (2026-11-04)
+# PadUI-Public — Action Dock 0.4 (2026-11-04)
 
-**Repository:** `wdcyvk8v26-debug/PadUI-Public`. **Branch:** `feature/action-dock-prototype-20261104`. Main is untouched.
+**Zielrepository:** `wdcyvk8v26-debug/PadUI-Public`, **nicht** das veraltete `PadUI`.
+**Branch:** `feature/action-dock-prototype-20261104`. Der reguläre `main`-Branch bleibt unangetastet.
 
-## Änderungen nach dem ersten Ingame-Screenshot
+## Erste Screenshots und Entscheidungen
 
-Der erste Ingame-Test zeigte **überlagerte Leisten** und **kaum erkennbare Unterschiede** zwischen den Presets. Diese Version behebt die Ursachen im experimentellen Code:
+Die ersten beiden Ingame-Tests zeigten (1) übereinanderliegende statt zusammengeführte Leisten, (2) eine zweite Leiste oberhalb der ersten, (3) keine gekoppelte Bewegung und (4) eine gegenüber dem HTML-Mockup zu simple Optik.
 
-- **Verankerung statt Bildschirmkoordinaten:** `gestionsets2:setParentPos(gestionsets)` und `setPosRef("TL BL"/"BL TL")` verankern den kompletten Zusatzleisten-Container an der Hauptleiste. Für Barpositionen mit wenig Platz nach oben wird die Zusatzleiste **unterhalb** angebracht. Das verhindert die frühere Vermischung von absoluten `x_real/y_real`- und lokalen `x/y`-Werten.
-- **Explizite Layout-Updates:** `updateCoords()` nach Ändern von Containergrößen, Slotabständen und der Verankerung, damit die nativen Ryzom-Controls die neue Position übernehmen.
-- **Deutlich anderer Platzbedarf:** Kompakt = **28 px**, Weit = **36 px** Rasterabstand. Originale Skill-Icons bleiben unverändert groß (natives `CDBCtrlSheet`).
-- **Drei eigenständige Farbthemen:** **Gold**, **Türkis/Aether**, **Kupfer/Ember**. Jedes färbt das Glas, die Oberkante, Slotrahmen, Waffenrahmen und Beschriftung. Zusätzlich gibt es drei spürbare Deckkraftstufen: 96, 77 und 42 %.
-- **160 zusätzliche 1-px-Randsegmente** um die 40 nativen Slots, farbabhängig; zwei Statusanzeigen zeigen beispielsweise `GOLD / 28` und die Zusatzleiste hat einen erkennbaren eigenen Randbereich.
-- Die originalen Fähigkeiten, Aktionen, Page-Selectors, 2 Waffenplätze, Drag-and-drop und Cooldowns werden weiterhin von Ryzom selbst gesteuert, **nicht** in Lua nachgebaut.
-- Um das getrennte Layout bei einem Relog wiederherstellen zu können, bleibt die vorherige Position in `UI:SAVE:PADUI:ACTION_DOCK:` gespeichert.
+**0.4 löst gezielt diese Probleme:**
 
-## Bedienung
+- **Standard unten:** Die zweite Leiste wird unterhalb der Hauptleiste angebracht. `UI:SAVE:PADUI:ACTION_DOCK:SIDE=0` ist der Default. Es erfolgt **kein automatischer Wechsel nach oben** aufgrund der Bildschirmhöhe mehr.
+- **Option oben:** über einen eigenen Menüpunkt; `SIDE=1` bleibt gespeichert.
+- **Mitziehen in beide Richtungen:** `gestionsets` und `gestionsets2` erhalten je einen nativen `on_move`-Callback. Der jeweils andere Container wird um das **Differential seiner tatsächlichen Bildschirmposition** verschoben. Die vorherige alleinige `setParentPos(main)`-Verankerung hat beim Verschieben nicht funktioniert und wird daher nicht mehr als Kopplung verwendet.
+- **Optisch ein Block:** kein Zwischenraum, gemeinsame Hintergrundfarbe, keine zweite ALT-/EXTRA-Titelzeile, keine doppelte glänzende Kante an der Naht, ein kompakter PadUI-Schriftzug nur auf der Hauptleiste.
+- **Gold, Türkis, Kupfer** sowie 28/36 px Raster und drei Glastönungen bleiben als Varianten erhalten; die Rahmenfarben sind absichtlich ruhiger als in 0.3.
+- **Reversibel:** Beim Trennen werden die zuvor gespeicherte Sichtbarkeit, ALT-Position und native horizontal/vertikal Ausrichtung restauriert.
+- **Nur echte Ryzom-Aktionen:** exakt 20 ursprüngliche `ctrl_memory` und 20 `ctrl_alt_memory` Instanzen. Beide originalen Seitenauswahlen und Waffenhand-Slots bleiben unverändert funktionsfähig.
+- **Kein globaler Mouseover, kein anderer Fenster-Code, kein C++-Patch, kein Kompass.**
 
-Rechtsklick auf eine der Aktionsleisten:
-- `PadUI · Leisten verbinden` / `PadUI · Leisten trennen`
-- `PadUI · Kompakt (28 px Raster)` / `PadUI · Weit (36 px Raster)`
-- `PadUI · Design: Gold` / `Design: Tuerkis` / `Design: Kupfer`
+## Rechtsklick-Menü beider Leisten
+
+- `PadUI · Verbinden (Zusatz unten)` — Standard
+- `PadUI · Verbinden (Zusatz oben)`
+- `PadUI · Leisten trennen`
+- `PadUI · Kompakt (28 px Raster)` / `Weit (36 px Raster)`
+- `PadUI · Design: Gold` / `Tuerkis` / `Kupfer`
 - `PadUI · Deckkraft: 96 %` / `77 %` / `42 %`
 
-Dock ist standardmäßig ausgeschaltet. Die separaten Leisten bleiben möglich.
+Die nativen Leisten können bei getrenntem Modus wie bisher frei positioniert werden.
 
-## Dateiübersicht
+## Dateien / Installation
 
-Im Spielverzeichnis **keine neue Datei erforderlich**, falls `padui_action_dock.lua` bereits als Symlink angelegt wurde. Für diese Revision wurden nur **bestehende Dateien** auf dem Feature-Branch überarbeitet:
+Aktualisiert:
+- `user/inventory.xml`: Menü für oben/unten, zusätzliche native `on_move`-Aktion der zweiten Leiste, korrigierte Bitmap-Bool-Attribute, gemeinsame Optik
+- `user/padui_action_dock.lua`: 0.4 gekoppelte Bewegung, Abstand = 0, Ausrichtung, Speicherung
+- `scripts/check_action_dock.py`: XML-/Kontrollstrukturprüfungen
+- `.github/workflows/action-dock-check.yml`: CI-Tests
+- diese Dokumentation
 
-- `user/inventory.xml` — zwei Container, Menüs, Gold-/Türkis-Kanten und Statusanzeige
-- `user/padui_action_dock.lua` — Verankerung, Live-Styling und getrennte Layout-Rückkehr
-- `scripts/check_action_dock.py` — Regressionstests (nur für Entwickler)
-- `.github/workflows/action-dock-check.yml` — experimentelle statische CI-Prüfung
-- Diese Dokumentation
+Neu im Repository:
+- `scripts/test_action_dock.lua`: Lua 5.1 Mocks der Fenster, Test für Ziehen beider Leisten, Position oben/unten, Umstellen der Themes/Abstände und Rückbau
 
-Der PadUI-Public-Code aus `main` außerhalb der Aktionsleisten wurde nicht durch alte PadUI-Dateien ersetzt. **Weder Git-Branch noch Symlinks müssen neu angelegt werden.**
+**Keine neuen Symlinks in Ryzom erforderlich:** `padui_action_dock.lua` ist bereits verlinkt, die anderen zwei `user`-Dateien sind schon Symlinks. Neue Test- und Dokumentdateien brauchen keine Spielverknüpfung.
 
-## Nächster Ingame-Test
+### Aktualisierung unter Windows
 
-1. **Ryzom komplett beenden.** Dann `git -C "C:\Users\ralph\PadUI-Public" pull --ff-only` ausführen (Branch ist bereits ausgewählt).
-2. Kontrollieren: `git -C "C:\Users\ralph\PadUI-Public" branch --show-current` muss `feature/action-dock-prototype-20261104` anzeigen.
-3. Ryzom starten, ggf. bestehendes Dock trennen und wieder verbinden, falls ein altes Layout gespeichert wurde.
-4. **Screenshot** mit beiden Leisten. Die 40 Slots müssen in **vier getrennten Reihen** erscheinen; bei knapper Höhe nach oben gehört die Zusatzleiste *unter* die Hauptleiste.
-5. 28/36 px Raster nacheinander umschalten; es muss sich die Breite um 80 px verändern. Gold/Türkis/Kupfer nacheinander umschalten; Status und Rahmenfarbe müssen sichtbar wechseln.
-6. Waffenplatz, Skillbelegungen, beide Seitenwähler, Drag-and-drop, Bewegen der Hauptleiste, Trennen/Wiederverbinden und Relog prüfen.
-7. Mit `python scripts/check_action_dock.py` XML und Struktur prüfen; mit installierter Lua-5.1-Umgebung auch Syntax.
+**Ryzom vollständig beenden.** In PowerShell:
 
-## Sicherheit und Limitierungen
+```powershell
+git -C "C:\Users\ralph\PadUI-Public" pull --ff-only
+git -C "C:\Users\ralph\PadUI-Public" branch --show-current
+```
 
-- **Nicht im echten Spiel verifiziert:** Diese Korrektur ist ein neuer Implementierungsversuch, kein bestätigter Ingame-Fix. Keine Aussage über Crash-Freiheit.
-- Nur die beiden nativen Aktionsleisten werden angefasst. Kein Kompass, keine Änderungen an globalem Mouseover oder anderem PadUI-Team-/Cast-Fensterverhalten.
-- Die Original-Skill-Icons sind an fest gepackte Ryzom-Texturen gebunden. Komplett neuartige große Slot-Icons und aufwendige geschwungene Bitmap-Rahmen aus dem Browser-Mockup brauchen spätere Atlas-/Client-Arbeiten. Die jetzige Variante bleibt daher eine XML-/Lua-Annäherung.
-- **Rollback:** Erst im Spiel `PadUI · Leisten trennen` wählen. Dann Git-Branch zurückwechseln, Ryzom neu starten. Vor Änderungen am Live-Client Backup der individuellen Fensterpositionen anlegen.
+Branch muss `feature/action-dock-prototype-20261104` anzeigen.
+
+Neustart Ryzom, mit **PadUI · Verbinden (Zusatz unten)** aktivieren. Die 4 Reihen sollen unmittelbar aneinander anschließen. Zum Vergleich erst nur die **Hauptleiste** bewegen, dann **die Zusatzleiste**, danach `Verbinden (Zusatz oben)` und `Leisten trennen`.
+
+## Teststatus
+
+- Automatischer Test: `python scripts/check_action_dock.py` prüft XML, die 40 nativen Slots, die originalen Waffen-Slots, die beiden native `on_move`-Callbacks und beide Menüpunkte.
+- Lua 5.1 Verhaltenstest: `lua5.1 scripts/test_action_dock.lua` simuliert Positionen, Bewegung von Haupt- und Zusatzleiste, oben/unten, große Abstände, Designwechsel, Rückbau inklusive gespeicherter Koordinaten und Ausrichtung.
+- GitHub Actions führt beides bei Commits auf dem Feature-Branch aus.
+
+**Wichtig:** Die Testumgebung enthält *keinen tatsächlichen Ryzom-Fenster-Renderer*. Die Funktion muss im Spiel geprüft werden. Auch das Erscheinungsbild ist weiterhin eine an native XML-Kontrollen angepasste Umsetzung, **kein 1:1-Nachbau der 3D-HTML-Vorschau**. Echte 24px-Icon-Skalierung würde gesonderte Core4-Client-Arbeiten erfordern.
+
+## Sicherheitsregeln
+
+- Kein Merge nach `main`, bevor du die Verschiebung beider Fenster im Spiel bestätigt hast.
+- Keine Änderungen an Ryzom-Kundendateien ohne deine separaten Symlinks; keine Änderungen an Team, Auras, Castbar global, Fenstertransparenz.
+- Rollback: im Spiel `PadUI · Leisten trennen`; bei Problemen Game beenden, `git -C "C:\Users\ralph\PadUI-Public" switch main` und neu starten. Die neue Lua-Datei als Symlink kann dabei bestehen bleiben, wird von `main` nicht geladen; für vollständigen Rückbau kann der Symlink später getrennt entfernt werden.
