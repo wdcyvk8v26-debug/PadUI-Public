@@ -72,6 +72,19 @@ require(int(main_window.get("win_priority", "3")) < int(alt_window.get("win_prio
         "MASTER priority must remain below ALT overlay")
 require(alt_window.get("active") == "true",
         "ALT native controls must stay active for hit testing")
+# Frame opacity and sheet content opacity are separate CGroupContainerBase
+# reflection props in Core4. This is the only reliable way to eliminate the
+# native ALT panel/selection outline without covering or disabling 20 skills.
+require('set(ALT,"use_global_alpha_settings",false)' in lua,
+        "ALT must opt out of global frame alpha only while docked")
+require('set(ALT,"container_alpha",0)' in lua,
+        "ALT native frame must be fully transparent in unified mode")
+require('set(ALT,"content_alpha",255)' in lua,
+        "ALT real skill icons must remain fully opaque")
+require('self.original.alt_container_alpha' in lua and
+        'self.original.alt_content_alpha' in lua and
+        'self.original.alt_global_alpha' in lua,
+        "ALT original alpha properties must be restored on split")
 require(len(elements("group", "id", "padui_dock_chrome")) == 2, "Glass panels missing")
 require(len(elements("group", "id", "padui_slot_chrome")) == 2, "Slot panels missing")
 for i in range(20):
