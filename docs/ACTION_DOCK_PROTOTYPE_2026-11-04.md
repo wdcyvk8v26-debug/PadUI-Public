@@ -4,6 +4,16 @@
 **Basis:** `feature/action-dock-prototype-20261104` (0.4).  
 **Keine Client-/C++-/Serveränderung.** Der stabile `main`-Branch bleibt unangetastet.
 
+## 0.5.1 – Z-Order/Mausklick-Fix
+
+**Befund aus echtem Ingame-Screenshot:** Die ALT-Skillbuttons sind vorhanden, wirken aber verdunkelt und lassen sich nicht anklicken. Ursache: Beide ursprünglichen Ryzom-Windows lagen in derselben Prioritätsstufe (NORMAL=3). Der über vier Reihen aufgezogene Mastercontainer verdeckte deshalb den unteren ALT-Bereich sowohl beim Zeichnen als auch beim Maustest.
+
+**Änderung ausschließlich in PadUI-Public/user/inventory.xml:** `gestionsets2` hat jetzt das vorhandene Core4-Attribut `win_priority="4"` (HIGH), während `gestionsets` bei NORMAL=3 bleibt. Dadurch sollten die echten `ctrl_alt_memory`-Controls über der einzigen Master-Hintergrundfläche gerendert werden und Mausklicks empfangen. Alle 40 IDs, Seiten-DB-Werte und Hand-Slots sind unverändert.
+
+**Einschränkung:** Die ALT-Priorität ist in dieser rein XML-basierten Testvariante auch bei getrennten Leisten HIGH. Das muss im Spiel mit anderen Fenstern geprüft werden. Es ist keine globale Fensteränderung. Wir verändern weder C++ noch `setOnDraw` noch die restliche PadUI-UI. Ein erfolgreicher statischer Test bestätigt **nicht** automatisch die tatsächliche Hit-Test-Reihenfolge im Spiel.
+
+**Nach dem Update:** Ryzom komplett schließen, auf dem vorhandenen Unified-Branch `git pull --ff-only`, Ryzom neu starten. Bei aktivem Dock prüfen, ob ALT-Skills unten jetzt hell und anklickbar sind; ALT-Drag-and-drop und Tooltip testen. Bei Problem per Menü trennen oder auf den vorherigen `feature/action-dock-prototype-20261104`-Branch zurückgehen.
+
 ## Ziel und technische Grenze
 
 Der Core4-Client erwartet zwei **fest verdrahtete UI-ID-Pfade** in `sphrase_manager.cpp` und `action_handler_phrase.cpp`:
