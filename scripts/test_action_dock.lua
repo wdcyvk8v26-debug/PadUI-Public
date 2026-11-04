@@ -105,7 +105,7 @@ local function eq(actual,expected,message)
         "; expected "..tostring(expected))
 end
 local function aligned(side)
-    local p=getUI(MAIN_SLOT),q=getUI(ALT_SLOT)
+    local p,q=getUI(MAIN_SLOT),getUI(ALT_SLOT)
     local pitch=db[SAVE.."SPACING"]==1 and 36 or 28
     eq(q.x_real,p.x_real,"All four rows share same first-column x")
     eq(q.y_real,p.y_real+(side==0 and -2*pitch or 2*pitch),
