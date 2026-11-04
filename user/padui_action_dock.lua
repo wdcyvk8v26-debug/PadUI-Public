@@ -248,7 +248,6 @@ function D:align(force)
     local main,alt=ui(MAIN),ui(ALT)
     if not main or not alt or not main.active or not alt.active then return end
 
-    redraw(main)
     -- Use the actual on-screen bounds ONLY to select above/below.
     -- The alt window itself is anchored by Ryzom, not by mixing x_real with x.
     local root=ui("ui:interface")
@@ -269,11 +268,11 @@ function D:align(force)
         else
             alt:setPosRef("BL TL")
         end
+        alt.x=0
+        alt.y=(side=="above" and 2 or -2)
+        redraw(alt)
         self.side=side
     end
-    alt.x=0
-    alt.y=(side=="above" and 2 or -2)
-    redraw(alt)
 end
 
 function D:enable()
@@ -302,9 +301,7 @@ function D:enable()
     if game and game.updateCurrentActionPosition then
         pcall(function() game:updateCurrentActionPosition() end)
     end
-    local chrome=ui(MAIN .. ":padui_dock_chrome")
-    if chrome then setOnDraw(chrome,"PadUIActionDock:tick()") end
-    self.lastTick=nil
+    -- No per-frame OnDraw handler. Native parent anchors follow main window.
     save("ENABLED",1)
     self:log("joined 20 MEMORY + 20 MEMORY_ALT controls")
     return true
@@ -361,8 +358,6 @@ end
 function D:disable()
     if not self.joined and setting("ENABLED",0)~=1 then return true end
     self.joined=false
-    local chrome=ui(MAIN .. ":padui_dock_chrome")
-    if chrome then setOnDraw(chrome,"") end
     self:skin(false)
     self:detachAlt()
     if setting("BACKUP_VALID",0)==1 then
@@ -405,27 +400,6 @@ function D:setGlass(v)
     if v<0 or v>2 then return end
     save("GLASS",v)
     if self.joined then self:skin(true) end
-end
-
-function D:tick()
-    if not self.joined or not game or not game.InGameDbInitialized then return end
-    local now=nltime and nltime.getLocalTime and nltime.getLocalTime() or 0
-    if self.lastTick and now>=self.lastTick and now-self.lastTick<500 then return end
-    self.lastTick=now
-
-    local main,alt=ui(MAIN),ui(ALT)
-    if not main or not alt then return end
-    if value(getDbProp(ALT_MODE),0)~=HORIZONTAL then
-        setDbProp(ALT_MODE,HORIZONTAL)
-        pcall(runAH,nil,"proc","gestionsets2_proc_horiz")
-        self:geometry()
-    end
-    local _,w,mh,ah=self:design()
-    if value(main.w,0)~=w or value(main.h,0)~=mh or
-        value(alt.w,0)~=w or value(alt.h,0)~=ah then
-        self:geometry()
-    end
-    self:align(false)
 end
 
 function D:prepareManualSecondBarChange()
