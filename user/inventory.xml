@@ -853,7 +853,10 @@
     <action id="vert" name="uiVertical" handler="proc" params="gestionsets2_proc_set|%gestionsets_v" />
     <separator />
   </group>
-  <group type="container" id="gestionsets2" w="68" h="300" resizer="false" header_active="false" right_button="false" group_onclick_r="active_menu" group_params_r="menu=ui:interface:gestionsets2_menu" movable="true" active="true" opened="false" openable="false" global_color="false" header_color="UI:SAVE:WIN:COLORS:INV" locked="true" on_active="proc" on_active_params="gestionsets2_proc_active" on_deactive="set" on_deactive_params="dblink=UI:VARIABLES:ISACTIVE:SETS2|value=0" help_page="interf_action_bar.html" on_move="lua:PadUIActionDock:onAltMoved()" options="padui_action_layer" global_color_over="false">
+  <!-- Core4: ALT shortcut controls must draw and receive mouse hits ABOVE
+       the large unified main dock. WIN_PRIORITY_HIGH=4 vs main NORMAL=3.
+       Keep both original control paths for sphrase_manager.cpp. -->
+  <group type="container" id="gestionsets2" w="68" h="300" resizer="false" header_active="false" right_button="false" group_onclick_r="active_menu" group_params_r="menu=ui:interface:gestionsets2_menu" movable="true" active="true" opened="false" openable="false" global_color="false" header_color="UI:SAVE:WIN:COLORS:INV" locked="true" on_active="proc" on_active_params="gestionsets2_proc_active" on_deactive="set" on_deactive_params="dblink=UI:VARIABLES:ISACTIVE:SETS2|value=0" help_page="interf_action_bar.html" win_priority="4" on_move="lua:PadUIActionDock:onAltMoved()" options="padui_action_layer" global_color_over="false">
     <view type="bitmap" id="padui_back" posref="TL TL" texture="blank.tga" scale="true" global_color="false" sizeref="wh" w="0" h="0" color="12 18 24 200" render_layer="-1" inherit_gc_alpha="false" />
     <view type="bitmap" id="padui_accent" posref="TL TL" texture="blank.tga" scale="true" global_color="false" sizeref="w" w="0" h="2" color="25 145 140 150" render_layer="-1" inherit_gc_alpha="false" />
     <group id="header_closed" x="0" y="0" w="68" h="300" posref="TL TL">
