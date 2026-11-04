@@ -52,6 +52,7 @@
     <param name="tx_br_highlight" value="w_hl_br.tga" />
   </options>
   <lua file="inventory.lua" />
+  <lua file="padui_action_dock.lua" />
   <variable entry="UI:TEMP_INV:ALL_EMPTY" type="sint32" value="1" />
   <variable entry="UI:PHRASE:SELECT_MEMORY" type="sint32" value="0" />
   <proc id="inv_left_click_on_slot">
@@ -477,18 +478,57 @@
   <template name="lock_button" id="" posparent="parent" posref="TL TL" x="0" y="0" w="24" h="9" active="true">
     <ctrl type="button" id="#id" button_type="toggle_button" posparent="#posparent" x="#x" y="#y" posref="#posref" active="#active" tx_normal="W_button_spellock_off.tga" tx_pushed="W_button_spellock_on.tga" tx_over="W_button_spellock_over.tga" />
   </template>
-  <group type="container" id="gestionsets" w="410" h="48" resizer="false" header_active="false" right_button="false" group_onclick_r="active_menu" group_params_r="menu=ui:interface:gestionsets_menu" movable="true" active="false" opened="false" openable="false" global_color="false" header_color="UI:SAVE:WIN:COLORS:INV" locked="true" on_active="set" on_active_params="dblink=UI:VARIABLES:ISACTIVE:SETS|value=1" on_deactive="set" on_deactive_params="dblink=UI:VARIABLES:ISACTIVE:SETS|value=0" help_page="interf_action_bar.html" on_move="lua:game:updateCurrentActionPosition()" options="padui_action_layer" global_color_over="false">
+  <group type="container" id="gestionsets" w="410" h="48" resizer="false" header_active="false" right_button="false" group_onclick_r="active_menu" group_params_r="menu=ui:interface:gestionsets_menu" movable="true" active="false" opened="false" openable="false" global_color="false" header_color="UI:SAVE:WIN:COLORS:INV" locked="true" on_active="set" on_active_params="dblink=UI:VARIABLES:ISACTIVE:SETS|value=1" on_deactive="set" on_deactive_params="dblink=UI:VARIABLES:ISACTIVE:SETS|value=0" help_page="interf_action_bar.html" on_move="lua:PadUIActionDock:onMainMoved()" options="padui_action_layer" global_color_over="false">
     <view type="bitmap" id="padui_back" posref="TL TL" texture="blank.tga" scale="true" global_color="false" sizeref="wh" w="0" h="0" color="12 18 24 200" render_layer="-1" inherit_gc_alpha="false" />
     <view type="bitmap" id="padui_accent" posref="TL TL" texture="blank.tga" scale="true" global_color="false" sizeref="w" w="0" h="2" color="25 145 140 150" render_layer="-1" inherit_gc_alpha="false" />
+    <group id="padui_dock_chrome" posref="TL TL" x="0" y="0" w="410" h="74" active="false">
+        <!-- Optional dock-only glass shell. Pure client XML; no packed textures. -->
+        <view type="bitmap" id="glass" posref="TL TL" x="0" y="0" w="410" h="74" texture="blank.tga" scale="true" global_color="false" color="10 17 26 211" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="sheen" posref="TL TL" x="2" y="-2" w="406" h="20" texture="blank.tga" scale="true" global_color="false" color="76 94 102 54" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_top" posref="TL TL" x="2" y="-2" w="406" h="2" texture="blank.tga" scale="true" global_color="false" color="212 170 98 205" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_bottom" posref="TL TL" x="2" y="-72" w="406" h="1" texture="blank.tga" scale="true" global_color="false" color="173 139 81 158" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_left" posref="TL TL" x="2" y="-2" w="1" h="70" texture="blank.tga" scale="true" global_color="false" color="191 148 86 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_right" posref="TL TL" x="408" y="-2" w="1" h="70" texture="blank.tga" scale="true" global_color="false" color="191 148 86 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_inner" posref="TL TL" x="4" y="-5" w="1" h="64" texture="blank.tga" scale="true" global_color="false" color="58 102 108 122" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="text" id="branding" posref="TL TL" x="9" y="-8" fontsize="8" shadow="true" global_color="false" color="222 190 127 255" hardtext="PadUI" render_layer="1" />
+      </group>
     <group id="header_closed" x="0" y="0" h="48" w="394" posref="TL TL" />
     <group id="hands" x="9" y="0" w="392" h="68" posref="ML ML" setnumber="1">
       <ctrl type="sheet" id="handr" posref="MR MR" x="0" tx_noitem="hand_right.tga" selection_group="inventory_selection" onclick_l="proc" params_l="inv_left_click_on_slot" tooltip="uittHandR" menu_r="%self_item_modal_menu" dragable="true" ondrag="inv_drag" params_drag="from_slot" oncannotdrop="inv_cannot_drop" oncandrop="inv_can_drop" ondrop="inv_drop" item_slot="RIGHT_HAND" value="%hand_r" other_hand_slot="handl" auto_grayed="false" tooltip_parent="win" />
       <ctrl type="sheet" id="handl" posref="ML ML" x="0" tx_noitem="hand_left.tga" selection_group="inventory_selection" onclick_l="proc" params_l="inv_left_click_on_slot" tooltip="uittHandL" menu_r="%self_item_modal_menu" dragable="true" ondrag="inv_drag" params_drag="from_slot" oncannotdrop="inv_cannot_drop" oncandrop="inv_can_drop" ondrop="inv_drop" item_slot="LEFT_HAND" value="%hand_l" other_hand_slot="handr" auto_grayed="false" tooltip_parent="win" />
+      <!-- The genuine hand slots retain native drag/drop and get optional gold bezels. -->
+      <view type="bitmap" id="padui_weapon_frame_l" posparent="handl" posref="TL TL" x="-3" y="3" w="30" h="30" texture="blank.tga" scale="true" global_color="false" color="216 172 93 200" render_layer="-1" active="false" inherit_gc_alpha="false" />
+      <view type="bitmap" id="padui_weapon_frame_r" posparent="handr" posref="TL TL" x="-3" y="3" w="30" h="30" texture="blank.tga" scale="true" global_color="false" color="216 172 93 200" render_layer="-1" active="false" inherit_gc_alpha="false" />
+      <view type="text" id="padui_weapon_label_l" posparent="handl" posref="TM BM" x="0" y="-3" fontsize="8" global_color="false" color="222 190 127 255" hardtext="L" active="false" />
+      <view type="text" id="padui_weapon_label_r" posparent="handr" posref="TM BM" x="0" y="-3" fontsize="8" global_color="false" color="222 190 127 255" hardtext="R" active="false" />
       <link expr="depends(@%bag:[%hand_r:INDEX_IN_BAG-1]:SHEET)" action="phrase_update_from_hand" />
       <link expr="depends(@%bag:[%hand_r:INDEX_IN_BAG-1]:QUALITY)" action="phrase_update_from_hand" />
       <link expr="depends(@%bag:[%hand_r:INDEX_IN_BAG-1]:ENCHANT)" action="phrase_update_from_hand" />
     </group>
     <group id="shortcuts" x="-8" w="278" h="52" posparent="hands" posref="MM MM">
+      <group id="padui_slot_chrome" posref="TL TL" x="0" y="0" w="278" h="52" active="false">
+        <!-- Native spell controls stay siblings, with original IDs and actions. -->
+        <view type="bitmap" id="frame0" posref="TL TL" x="-1" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame1" posref="TL TL" x="27" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame2" posref="TL TL" x="55" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame3" posref="TL TL" x="83" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame4" posref="TL TL" x="111" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame5" posref="TL TL" x="139" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame6" posref="TL TL" x="167" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame7" posref="TL TL" x="195" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame8" posref="TL TL" x="223" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame9" posref="TL TL" x="251" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame10" posref="TL TL" x="-1" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame11" posref="TL TL" x="27" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame12" posref="TL TL" x="55" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame13" posref="TL TL" x="83" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame14" posref="TL TL" x="111" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame15" posref="TL TL" x="139" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame16" posref="TL TL" x="167" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame17" posref="TL TL" x="195" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame18" posref="TL TL" x="223" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame19" posref="TL TL" x="251" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+      </group>
       <instance template="ctrl_memory" index="0" x="0" y="0" tx_noitem="W_slot_shortcut_id0.tga" />
       <instance template="ctrl_memory" index="1" x="28" y="0" tx_noitem="W_slot_shortcut_id1.tga" />
       <instance template="ctrl_memory" index="2" x="56" y="0" tx_noitem="W_slot_shortcut_id2.tga" />
@@ -529,11 +569,21 @@
   <variable entry="UI:SAVE:GESTIONSETS:DRAGDROP" type="sint32" value="1" />
   <variable entry="UI:SAVE:GESTIONSETS2:DRAGDROP" type="sint32" value="1" />
   <variable entry="UI:SAVE:GESTIONSETS2_MODE" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:ENABLED" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:BACKUP_VALID" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:FIRST_ACTIVE" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SECOND_ACTIVE" type="sint32" value="1" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SECOND_X" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SECOND_Y" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SECOND_MODE" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SPACING" type="sint32" value="0" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:GLASS" type="sint32" value="1" />
   <proc id="gestionsets2_proc_active">
     <action handler="set" params="dblink=UI:VARIABLES:ISACTIVE:SETS2|value=1" />
     <action handler="proc" params="gestionsets2_proc_mode" />
   </proc>
   <proc id="gestionsets2_proc_set">
+    <action handler="lua" params="PadUIActionDock:prepareManualSecondBarChange()" />
     <action handler="set" params="dblink=UI:SAVE:GESTIONSETS2_MODE|value=@0" />
     <action handler="proc" params="gestionsets2_proc_mode" />
   </proc>
@@ -654,11 +704,31 @@
     <action handler="set" params="target='ui:interface:gestionsets2_menu:disable_dragdrop:active'|value=@UI:SAVE:GESTIONSETS2:DRAGDROP" />
   </proc>
   <group type="menu" id="gestionsets_menu" extends="base_menu_with_color">
+    <action id="dock_join" name="PadUI · Leisten verbinden" handler="lua" params="PadUIActionDock:enable()" />
+    <action id="dock_split" name="PadUI · Leisten trennen" handler="lua" params="PadUIActionDock:disable()" />
+    <separator />
+    <action id="dock_spacing_compact" name="PadUI · Kompakt (28 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(0)" />
+    <action id="dock_spacing_relaxed" name="PadUI · Weit (31 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(1)" />
+    <separator />
+    <action id="dock_glass_deep" name="PadUI · Dunkles Glas" handler="lua" params="PadUIActionDock:setGlass(0)" />
+    <action id="dock_glass_soft" name="PadUI · Glas" handler="lua" params="PadUIActionDock:setGlass(1)" />
+    <action id="dock_glass_clear" name="PadUI · Leicht transparent" handler="lua" params="PadUIActionDock:setGlass(2)" />
+    <separator />
     <action id="enable_dragdrop" name="uiUnlockIcons" handler="set" params="dblink=UI:SAVE:GESTIONSETS:DRAGDROP|value=1" />
     <action id="disable_dragdrop" name="uiLockIcons" handler="set" params="dblink=UI:SAVE:GESTIONSETS:DRAGDROP|value=0" />
     <separator />
   </group>
   <group type="menu" id="gestionsets2_menu" extends="base_menu_with_color">
+    <action id="dock_join" name="PadUI · Leisten verbinden" handler="lua" params="PadUIActionDock:enable()" />
+    <action id="dock_split" name="PadUI · Leisten trennen" handler="lua" params="PadUIActionDock:disable()" />
+    <separator />
+    <action id="dock_spacing_compact" name="PadUI · Kompakt (28 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(0)" />
+    <action id="dock_spacing_relaxed" name="PadUI · Weit (31 px Raster)" handler="lua" params="PadUIActionDock:setSpacing(1)" />
+    <separator />
+    <action id="dock_glass_deep" name="PadUI · Dunkles Glas" handler="lua" params="PadUIActionDock:setGlass(0)" />
+    <action id="dock_glass_soft" name="PadUI · Glas" handler="lua" params="PadUIActionDock:setGlass(1)" />
+    <action id="dock_glass_clear" name="PadUI · Leicht transparent" handler="lua" params="PadUIActionDock:setGlass(2)" />
+    <separator />
     <action id="enable_dragdrop" name="uiUnlockIcons" handler="set" params="dblink=UI:SAVE:GESTIONSETS2:DRAGDROP|value=1" />
     <action id="disable_dragdrop" name="uiLockIcons" handler="set" params="dblink=UI:SAVE:GESTIONSETS2:DRAGDROP|value=0" />
     <separator />
@@ -670,7 +740,41 @@
     <view type="bitmap" id="padui_back" posref="TL TL" texture="blank.tga" scale="true" global_color="false" sizeref="wh" w="0" h="0" color="12 18 24 200" render_layer="-1" inherit_gc_alpha="false" />
     <view type="bitmap" id="padui_accent" posref="TL TL" texture="blank.tga" scale="true" global_color="false" sizeref="w" w="0" h="2" color="25 145 140 150" render_layer="-1" inherit_gc_alpha="false" />
     <group id="header_closed" x="0" y="0" w="68" h="300" posref="TL TL">
+      <group id="padui_dock_chrome" posref="TL TL" x="0" y="0" w="410" h="64" active="false">
+        <!-- Optional dock-only glass shell. Pure client XML; no packed textures. -->
+        <view type="bitmap" id="glass" posref="TL TL" x="0" y="0" w="410" h="64" texture="blank.tga" scale="true" global_color="false" color="10 17 26 211" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="sheen" posref="TL TL" x="2" y="-2" w="406" h="20" texture="blank.tga" scale="true" global_color="false" color="76 94 102 54" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_top" posref="TL TL" x="2" y="-2" w="406" h="2" texture="blank.tga" scale="true" global_color="false" color="94 205 203 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_bottom" posref="TL TL" x="2" y="-62" w="406" h="1" texture="blank.tga" scale="true" global_color="false" color="173 139 81 158" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_left" posref="TL TL" x="2" y="-2" w="1" h="60" texture="blank.tga" scale="true" global_color="false" color="191 148 86 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_right" posref="TL TL" x="408" y="-2" w="1" h="60" texture="blank.tga" scale="true" global_color="false" color="191 148 86 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="line_inner" posref="TL TL" x="4" y="-5" w="1" h="54" texture="blank.tga" scale="true" global_color="false" color="58 102 108 122" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="text" id="branding" posref="TL TL" x="9" y="-8" fontsize="8" shadow="true" global_color="false" color="112 210 202 255" hardtext="ALT" render_layer="1" />
+      </group>
       <group id="shortcuts" y="-1" w="68" h="300" posref="TL TL">
+      <group id="padui_slot_chrome" posref="TL TL" x="0" y="0" w="278" h="52" active="false">
+        <!-- Native spell controls stay siblings, with original IDs and actions. -->
+        <view type="bitmap" id="frame0" posref="TL TL" x="-1" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame1" posref="TL TL" x="27" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame2" posref="TL TL" x="55" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame3" posref="TL TL" x="83" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame4" posref="TL TL" x="111" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame5" posref="TL TL" x="139" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame6" posref="TL TL" x="167" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame7" posref="TL TL" x="195" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame8" posref="TL TL" x="223" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame9" posref="TL TL" x="251" y="1" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="197 162 96 194" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame10" posref="TL TL" x="-1" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame11" posref="TL TL" x="27" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame12" posref="TL TL" x="55" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame13" posref="TL TL" x="83" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame14" posref="TL TL" x="111" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame15" posref="TL TL" x="139" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame16" posref="TL TL" x="167" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame17" posref="TL TL" x="195" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame18" posref="TL TL" x="223" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+        <view type="bitmap" id="frame19" posref="TL TL" x="251" y="-27" w="26" h="26" texture="blank.tga" scale="true" global_color="false" color="125 171 174 160" render_layer="-1" inherit_gc_alpha="false" />
+      </group>
         <instance template="ctrl_alt_memory" index="0" x="0" y="0" tx_noitem="W_slot_shortcut_id0.tga" />
         <instance template="ctrl_alt_memory" index="1" y="-28" x="0" tx_noitem="W_slot_shortcut_id1.tga" />
         <instance template="ctrl_alt_memory" index="2" y="-56" x="0" tx_noitem="W_slot_shortcut_id2.tga" />
