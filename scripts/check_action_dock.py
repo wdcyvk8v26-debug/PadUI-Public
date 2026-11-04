@@ -70,7 +70,11 @@ for i in range(20):
 require(len(elements("view", "id", "padui_mode")) == 2,
         "Theme/spacing status labels missing")
 require(len(elements("view", "id", "aux_label")) == 1,
-        "Second-bar emblem missing")
+        "Legacy alt label must exist for reversible cosmetics")
+for f in root.iter("view"):
+    if f.get("id", "").startswith("frame"):
+        require(f.get("global_color") in (None, "false", "true"),
+                "Invalid bitmap global_color boolean")
 
 for name in ["handl", "handr"]:
     hands = [
@@ -80,7 +84,7 @@ for name in ["handl", "handr"]:
     require(len(hands) >= 1 and hands[0].get("dragable") == "true",
             f"Real weapon slot {name} unavailable")
 
-for action in ["dock_join", "dock_split", "dock_spacing_compact",
+for action in ["dock_join", "dock_join_above", "dock_split", "dock_spacing_compact",
                "dock_spacing_relaxed", "dock_glass_deep", "dock_glass_soft",
                "dock_glass_clear", "dock_theme_gold", "dock_theme_aether",
                "dock_theme_ember"]:
@@ -88,7 +92,7 @@ for action in ["dock_join", "dock_split", "dock_spacing_compact",
 
 required_db = [
     "ENABLED", "BACKUP_VALID", "FIRST_ACTIVE", "SECOND_ACTIVE", "SECOND_X",
-    "SECOND_Y", "SECOND_MODE", "SPACING", "GLASS", "THEME",
+    "SECOND_Y", "SECOND_MODE", "SPACING", "GLASS", "THEME", "SIDE",
 ]
 for name in required_db:
     require(len(elements("variable", "entry", f"UI:SAVE:PADUI:ACTION_DOCK:{name}")) == 1,
@@ -101,27 +105,39 @@ require('on_move="lua:PadUIActionDock:onMainMoved()"' in xml,
         "Missing native current-action positioning hook")
 require("game:updateCurrentActionPosition()" in lua,
         "Native cast/current action positioning must be preserved")
-require("alt:setParentPos(main)" in lua and
-        'alt:setPosRef("TL BL")' in lua and
-        'alt:setPosRef("BL TL")' in lua,
-        "Cross-window docking must use native Ryzom hotspot anchoring")
-require('self:placeSlots(mainShort, pitch)' in lua and
+require("function D:onMainMoved()" in lua and
+        "function D:onAltMoved()" in lua and
+        "self:sync(\"main\")" in lua and "self:sync(\"alt\")" in lua,
+        "Both-window drag propagation must be installed")
+require('on_move="lua:PadUIActionDock:onAltMoved()"' in xml,
+        "Second window must have a native Ryzom on_move callback")
+require('function D:joinBelow()' in lua and 'function D:joinAbove()' in lua,
+        "Dock positioning above/below must be independently selectable")
+require('local GAP = 0' in lua, "Dock shells should have no vertical gap")
+require('self:placeSlots(mainGrid,pitch)' in lua and
         "for i=0,19 do" in lua and
-        'put(MAIN .. ":shortcuts:s" .. i,"y",-math.floor(i/10)*26)' in lua,
-        "Slot layout and original 28x26 fallback must both exist")
-require('function D:setTheme(v)' in lua and 'function D:setGlass(v)' in lua,
+        'set(MAIN .. ":shortcuts:s" .. i,"y",-math.floor(i/10)*26)' in lua,
+        "Native slot layout and exact original 28x26 reset must exist")
+require('function D:setTheme(which)' in lua and
+        'function D:setGlass(which)' in lua,
         "Live theme and transparency controls are missing")
-require('redraw(alt)' in lua and 'redraw(ui(MAIN))' in lua,
-        "Native coordinate updates are required after layout changes")
+require('update(find(MAIN))' in lua and 'update(find(ALT))' in lua,
+        "Native window coordinates must update after layout changes")
+require('source=="alt"' in lua and "function D:moveReal(" in lua,
+        "Native independent window move deltas are required")
+require('set(chrome .. ":branding","active",i==1)' in lua and
+        'set(chrome .. ":aux_label","active",false)' in lua,
+        "Supplementary dock must not show a second titlebar")
+require("setOnDraw(" not in lua, "No per-frame window mutation allowed")
 
 # Chrome is opt-in and does not modify the global rollover/opacity settings.
 require("CONTAINER_ROLLOVER_FACTOR" not in lua
         and "CONTAINER_ALPHA" not in lua, "Global mouseover must not change")
 require("PadUIActionDock:disable()" in xml, "No visible opt-out")
 
-print("PASS: XML parses, 40 genuine action controls, 160 gold/teal bezels,")
-print("      two native weapon controls, anchored layout, theme menus,")
-print("      saved settings and reversible native geometry.")
+print("PASS: XML parses, 20+20 native phrase controls and 160 bevel edges")
+print("      Both-window drag callbacks, bottom/top docking menus, saved")
+print("      settings and native layout restoration are present.")
 
 compiler = shutil.which("luac5.1") or shutil.which("luac")
 if compiler:
