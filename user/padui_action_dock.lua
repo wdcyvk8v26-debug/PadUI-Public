@@ -461,6 +461,14 @@ end
 
 function D:skin(enabled)
     oldSkin(self,enabled)
+    -- The master shell must be the only visible frame. Native Core4
+    -- highlighter textures are disabled for BOTH windows in unified mode.
+    -- We keep both windows' real shortcut controls and input processing.
+    for _,p in ipairs({MAIN,ALT}) do
+        local original=self.original
+        local fallback=original and original[p .. ":options"] or "padui_action_layer"
+        set(p,"options",enabled and "padui_unified_clean_layer" or fallback)
+    end
     local mainChrome=MAIN .. ":padui_dock_chrome"
     local altChrome=ALT .. ":header_closed:padui_dock_chrome"
     set(altChrome,"active",false)
@@ -473,6 +481,8 @@ function D:skin(enabled)
     set(mainChrome .. ":padui_mode","active",false)
     set(mainChrome .. ":riv_l","active",false)
     set(mainChrome .. ":riv_r","active",false)
+    -- Also remove our optional seam: four uninterrupted skill rows.
+    set(mainChrome .. ":unified_seam","active",false)
     set(altChrome .. ":branding","active",false)
     set(altChrome .. ":padui_mode","active",false)
     set(altChrome .. ":aux_label","active",false)
@@ -581,6 +591,11 @@ function D:saveOriginal(main,alt)
         saveSetting("SECOND_MOVABLE",alt.movable==false and 0 or 1)
     end
     oldSaveOriginal(self,main,alt)
+    if self.original then
+        local a=find(MAIN)
+        self.original[MAIN .. ":options"]=a and a.options or "padui_action_layer"
+        self.original[ALT .. ":options"]=alt.options or "padui_action_layer"
+    end
 end
 
 function D:resetGeometry()
