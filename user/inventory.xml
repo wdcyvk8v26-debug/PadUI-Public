@@ -51,6 +51,59 @@
     <param name="tx_b_highlight" value="w_hl_b.tga" />
     <param name="tx_br_highlight" value="w_hl_br.tga" />
   </options>
+  <!-- Unified mode: no native selection outline. Only PadUI master chrome
+       is drawn; sheet controls still receive native mouse events. -->
+  <options type="layer" name="padui_unified_clean_layer">
+    <param name="title_font_size" value="0" />
+    <param name="title_offset_x" value="0" />
+    <param name="title_offset_y" value="0" />
+    <param name="title_offset_openable_x" value="0" />
+    <param name="title_offset_openable_y" value="0" />
+    <param name="header_h" value="0" />
+    <param name="open_state_tx_opened" value="no_bord.tga" />
+    <param name="open_state_tx_closed" value="no_bord.tga" />
+    <param name="open_state_offset_x" value="0" />
+    <param name="open_state_offset_y" value="0" />
+    <param name="right_button_offset_x" value="0" />
+    <param name="right_button_offset_y" value="0" />
+    <param name="right_button_tx_deactive" value="none" />
+    <param name="right_button_tx_popup" value="none" />
+    <param name="right_button_tx_popin" value="none" />
+    <param name="right_button_tx_over" value="none" />
+    <param name="right_button_tx_locked" value="none" />
+    <param name="help_button_offset_x" value="0" />
+    <param name="help_button_offset_y" value="0" />
+    <param name="help_button_tx" value="none" />
+    <param name="help_button_tx_over" value="none" />
+    <param name="tx_l_header" value="no_bord.tga" />
+    <param name="tx_m_header" value="no_bord.tga" />
+    <param name="tx_r_header" value="no_bord.tga" />
+    <param name="tx_tl" value="no_bord.tga" />
+    <param name="tx_t" value="no_bord.tga" />
+    <param name="tx_tr" value="no_bord.tga" />
+    <param name="tx_l" value="no_bord.tga" />
+    <param name="tx_r" value="no_bord.tga" />
+    <param name="tx_blank" value="no_bord.tga" />
+    <param name="tx_bl" value="no_bord.tga" />
+    <param name="tx_b" value="no_bord.tga" />
+    <param name="tx_br" value="no_bord.tga" />
+    <param name="tx_bl_open" value="no_bord.tga" />
+    <param name="tx_b_open" value="no_bord.tga" />
+    <param name="tx_br_open" value="no_bord.tga" />
+    <param name="tx_el_open" value="no_bord.tga" />
+    <param name="tx_em_open" value="no_bord.tga" />
+    <param name="tx_er_open" value="no_bord.tga" />
+    <param name="tx_m_open" value="no_bord.tga" />
+    <param name="tx_e_open" value="no_bord.tga" />
+    <param name="tx_tl_highlight" value="no_bord.tga" />
+    <param name="tx_t_highlight" value="no_bord.tga" />
+    <param name="tx_tr_highlight" value="no_bord.tga" />
+    <param name="tx_l_highlight" value="no_bord.tga" />
+    <param name="tx_r_highlight" value="no_bord.tga" />
+    <param name="tx_bl_highlight" value="no_bord.tga" />
+    <param name="tx_b_highlight" value="no_bord.tga" />
+    <param name="tx_br_highlight" value="no_bord.tga" />
+  </options>
   <lua file="inventory.lua" />
   <lua file="padui_action_dock.lua" />
   <variable entry="UI:TEMP_INV:ALL_EMPTY" type="sint32" value="1" />
