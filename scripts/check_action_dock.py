@@ -54,8 +54,9 @@ require(
 )
 for template in [main_template[0], alt_template[0]]:
     ctrl = template.find("ctrl")
-    for key in ("onclick_l", "ondrag", "ondrop", "oncandrop", "menu_r"):
+    for key in ("onclick_l", "ondrop", "oncandrop", "menu_r"):
         require(bool(ctrl.get(key)), f"Missing native input handler: {key}")
+    require(ctrl.get("dragable") == "true", "Native draggable sheet must remain")
 
 require(len(elements("group", "id", "gestionsets")) == 1, "Main window changed")
 require(len(elements("group", "id", "gestionsets2")) == 1, "Alt window changed")
