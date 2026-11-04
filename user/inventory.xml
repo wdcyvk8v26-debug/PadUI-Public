@@ -732,6 +732,10 @@
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SIDE" type="sint32" value="0" />
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:PAGE_SYNC" type="sint32" value="1" />
   <variable entry="UI:SAVE:PADUI:ACTION_DOCK:SECOND_MOVABLE" type="sint32" value="1" />
+  <!-- Persisted native ALT window opacity snapshot; needed for safe relog/split. -->
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:ALT_GLOBAL_ALPHA" type="sint32" value="1" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:ALT_CONTAINER_ALPHA" type="sint32" value="255" />
+  <variable entry="UI:SAVE:PADUI:ACTION_DOCK:ALT_CONTENT_ALPHA" type="sint32" value="255" />
   <proc id="gestionsets2_proc_active">
     <action handler="set" params="dblink=UI:VARIABLES:ISACTIVE:SETS2|value=1" />
     <action handler="proc" params="gestionsets2_proc_mode" />
