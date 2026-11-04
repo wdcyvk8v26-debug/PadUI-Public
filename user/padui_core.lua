@@ -172,5 +172,10 @@ function P:start()
    if not ok then debugInfo("PadUI initialization: "..tostring(err)) end
   end
  end
+ -- Optional Action Dock: restore the saved dock only after Ryzom UI initialized.
+ if PadUIActionDock then
+  local ok,err=pcall(function() PadUIActionDock:start() end)
+  if not ok then debugInfo("PadUI Action Dock init: "..tostring(err)) end
+ end
  P:localize(true)
 end
