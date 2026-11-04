@@ -142,6 +142,8 @@ function D:skin(enabled)
         put(cp .. ":riv_l", "color", shade(accent, 255))
         put(cp .. ":riv_r", "color", shade(accent, 255))
         put(cp .. ":padui_mode", "hardtext", p.name .. " / " .. tostring(pitch))
+        put(cp .. ":aux_label", "color", shade(accent, 240))
+        put(cp .. ":aux_caption", "color", shade(accent, 210))
     end
     self:frameColors(MAIN .. ":shortcuts", pitch, p.main, p.alt)
     self:frameColors(ALT .. ":header_closed:shortcuts", pitch, p.alt, p.main)
@@ -223,11 +225,14 @@ function D:saveOriginal(main, alt)
 
     -- Exact original runtime reference/position; no other window is changed.
     local anchor = {}
-    anchor.x = alt.x
-    anchor.y = alt.y
-    anchor.posref = alt.posref
-    anchor.parentposref = alt.parentposref
-    anchor.parentId = alt.posparent
+    -- After relog the visible ALT coordinates may be the DOCK coordinates.
+    -- Restore the preserved pre-dock position, not those transient ones.
+    local reloading = setting("ENABLED",0)==1 and setting("BACKUP_VALID",0)==1
+    anchor.x = reloading and setting("SECOND_X",value(alt.x,0)) or alt.x
+    anchor.y = reloading and setting("SECOND_Y",value(alt.y,0)) or alt.y
+    anchor.posref = reloading and "BL" or alt.posref
+    anchor.parentposref = reloading and "BL" or alt.parentposref
+    anchor.parentId = reloading and "parent" or alt.posparent
     self.original = self.original or {}
     self.original.anchor = anchor
     for _,p in ipairs({MAIN,ALT}) do
